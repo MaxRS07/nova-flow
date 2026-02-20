@@ -1,226 +1,66 @@
-import type {
-    ActResponse,
-    ExtractedDataResponse,
-    FileOperationResponse,
-    ActOptions,
-    ExtractOptions,
-    ScreenshotOptions,
-    ClickOptions,
-    TypeOptions,
-    SearchOptions,
-    UploadOptions,
-    DownloadOptions,
-} from '@/types/nova';
+import { ActMetadata } from "@/types/nova";
 
-/**
- * Helper functions for calling Nova Flow API endpoints
- * All functions handle errors and throw on failure
- */
-
-/**
- * Execute a browser action using natural language instruction
- */
-export async function performBrowserAction(options: ActOptions): Promise<ActResponse> {
-    const response = await fetch('/api/browser', {
+export async function startNovaActJob(data: any): Promise<ActSocket> {
+    const response = await fetch("/api/aws", {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            action: 'act',
-            ...options,
-        }),
-    });
+        body: JSON.stringify(data)
+    })
+    const resData = await response.json();
 
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Browser action failed');
+    if (response.ok && resData.data && resData.data.run_id) {
+        const { data } = resData;
+        const socket = new ActSocket(data.run_id);
+        return socket;
+    } else {
+        throw new Error(resData.error || "Failed to start Nova Act job");
     }
-
-    return data;
 }
 
-/**
- * Extract structured data from a web page
- */
-export async function extractPageData(options: ExtractOptions): Promise<ExtractedDataResponse> {
-    const response = await fetch('/api/browser', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'extract',
-            ...options,
-        }),
-    });
+class ActSocket {
+    private socket: WebSocket;
 
-    const data = await response.json();
+    constructor(run_id: string) {
+        this.socket = new WebSocket(`${process.env.NOVACORE_WS_URL}${run_id}`);
 
-    if (!response.ok) {
-        throw new Error(data.error || 'Data extraction failed');
+        this.socket.onopen = () => {
+            console.log("WebSocket connection established for run:", run_id);
+        };
+
+        this.socket.onclose = () => {
+            console.log("WebSocket connection closed for run:", run_id);
+            this.socket.close();
+        };
+
+        this.socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            switch (data.type) {
+                case 'user_input':
+                    this.onApprovalRequest(data.input);
+                    break;
+                case 'act_update':
+                    const metadata: ActMetadata = data.metadata || {};
+                    console.log("Received act update:", data.update);
+                    break;
+                default:
+                    console.log("Received message:", data);
+            }
+        };
     }
 
-    return data;
-}
-
-/**
- * Take a screenshot of a page after performing an action
- */
-export async function takeScreenshot(options: ScreenshotOptions): Promise<ActResponse> {
-    const response = await fetch('/api/browser', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'screenshot',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Screenshot failed');
+    send(data: any) {
+        this.socket.send(JSON.stringify(data));
     }
 
-    return data;
-}
-
-/**
- * Click an element on the page
- */
-export async function clickElement(options: ClickOptions): Promise<ActResponse> {
-    const response = await fetch('/api/interact', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'click',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Click action failed');
+    async onApprovalRequest(callback: (input: string) => boolean) {
+        this.socket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'user_input') {
+                const approved = await callback(data.input);
+                this.send({ approved: approved, input: data.input });
+            }
+        }
     }
-
-    return data;
-}
-
-/**
- * Type text into a field on the page
- */
-export async function typeText(options: TypeOptions): Promise<ActResponse> {
-    const response = await fetch('/api/interact', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'type',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Type action failed');
-    }
-
-    return data;
-}
-
-/**
- * Search on a website
- */
-export async function searchSite(options: SearchOptions): Promise<ActResponse> {
-    const response = await fetch('/api/interact', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'search',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'Search action failed');
-    }
-
-    return data;
-}
-
-/**
- * Upload a file to a website
- */
-export async function uploadFile(options: UploadOptions): Promise<FileOperationResponse> {
-    const response = await fetch('/api/files', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'upload',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'File upload failed');
-    }
-
-    return data;
-}
-
-/**
- * Download a file from a website
- */
-export async function downloadFile(options: DownloadOptions): Promise<FileOperationResponse> {
-    const response = await fetch('/api/files', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            action: 'download',
-            ...options,
-        }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new Error(data.error || 'File download failed');
-    }
-
-    return data;
-}
-
-/**
- * Retrieve a previously downloaded file by ID
- */
-export async function getDownloadedFile(fileId: string): Promise<Blob> {
-    const response = await fetch(`/api/files/${fileId}`, {
-        method: 'GET',
-    });
-
-    if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'File retrieval failed');
-    }
-
-    return response.blob();
 }

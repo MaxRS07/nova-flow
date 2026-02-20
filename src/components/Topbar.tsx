@@ -1,37 +1,41 @@
 'use client';
 
 import Link from 'next/link';
-
+import UserMenu from './UserMenu';
+import { useParams } from 'next/navigation';
 export default function Topbar() {
+    const params = useParams();
+    console.log(params);
     return (
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-            {/* Search */}
-            <div className="flex-1 max-w-2xl">
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Search workflows..."
-                        className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                </div>
+        <header className="h-14 flex items-center justify-between px-6 bg-[var(--surface)] shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className='flex flex-row'>
+                <Link href="/" className="font-mono text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)] transition-colors tracking-tight">
+                    qa-platform
+                </Link>
+                {params.repository_id && (
+                    <>
+                        <span className="mx-2 text-[var(--muted)]">/</span>
+                        <Link href={`/repository/${params.repository_id}/dashboard`} className="font-mono text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)] transition-colors tracking-tight">
+                            {`repo-${params.repository_id}`}
+                        </Link>
+                    </>
+                )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-3 ml-6">
-                <button className="px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium" title="Notifications">
-                    Notifications
+            <div className="flex-1 max-w-md mx-8">
+                <input
+                    type="text"
+                    placeholder="Search projects..."
+                    className="w-full px-3.5 py-2 text-sm rounded-lg bg-[var(--muted-bg)] text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-all"
+                    style={{ border: 'none' }}
+                />
+            </div>
+
+            <div className="flex items-center gap-4">
+                <button title="Open Web CLI" className="text-[var(--muted)] hover:text-[var(--foreground-soft)] transition-colors text-xs font-mono tracking-wide">
+                    terminal
                 </button>
-                <button className="px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm text-gray-700 font-medium" title="Options">
-                    Options
-                </button>
-                <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium hover:shadow-lg transition-all">
-                    Share
-                </button>
-                <Link href="/auth">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-white font-semibold cursor-pointer hover:shadow-lg transition-all">
-                        U
-                    </div>
-                </Link>
+                <UserMenu />
             </div>
         </header>
     );

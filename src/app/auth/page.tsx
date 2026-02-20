@@ -1,175 +1,64 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signup, login } from '@/lib/auth';
 
 export default function AuthPage() {
-    const router = useRouter();
-    const [isLogin, setIsLogin] = useState(true);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
 
-    const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        name: '',
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+    const handleGitHubLogin = async () => {
         setLoading(true);
-
-        try {
-            if (isLogin) {
-                await login({
-                    email: formData.email,
-                    password: formData.password,
-                });
-                router.push('/');
-            } else {
-                await signup({
-                    email: formData.email,
-                    password: formData.password,
-                    name: formData.name,
-                });
-                router.push('/');
-            }
-        } catch (err: any) {
-            setError(err.message || 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
+        window.location.href = "/api/auth/github?action=login";
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                {/* Logo */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent mb-2">
-                        Nova Flow
-                    </h1>
-                    <p className="text-gray-600">Agentic Workflows Hub</p>
+        <div className="min-h-screen flex bg-[var(--background)]">
+
+            {/* Left — Login panel */}
+            <div className="w-96 shrink-0 flex flex-col bg-[var(--surface)] px-10 py-14" style={{ borderRight: '1px solid var(--border)' }}>
+
+                {/* Wordmark */}
+                <div className="mb-16">
+                    <p className="font-mono text-sm font-semibold text-[var(--foreground)] tracking-tight">qa-platform</p>
                 </div>
 
-                {/* Auth Card */}
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    {/* Toggle */}
-                    <div className="flex gap-2 mb-6 bg-gray-100 rounded-lg p-1">
-                        <button
-                            onClick={() => setIsLogin(true)}
-                            className={`flex-1 py-2 rounded-lg font-medium transition-all ${isLogin
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            Login
-                        </button>
-                        <button
-                            onClick={() => setIsLogin(false)}
-                            className={`flex-1 py-2 rounded-lg font-medium transition-all ${!isLogin
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-gray-600 hover:text-gray-900'
-                                }`}
-                        >
-                            Sign Up
-                        </button>
-                    </div>
-
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {!isLogin && (
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Name
-                                </label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Enter your name"
-                                />
-                            </div>
-                        )}
-
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                                Email
-                            </label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="Enter your email"
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="Enter your password"
-                            />
-                        </div>
-
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                                {error}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {loading ? 'Please wait...' : isLogin ? 'Login' : 'Sign Up'}
-                        </button>
-                    </form>
-
-                    {/* Footer */}
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-600">
-                            {isLogin ? "Don't have an account? " : 'Already have an account? '}
-                            <button
-                                onClick={() => setIsLogin(!isLogin)}
-                                className="text-blue-600 font-medium hover:text-purple-600 transition-colors"
-                            >
-                                {isLogin ? 'Sign up' : 'Login'}
-                            </button>
-                        </p>
-                    </div>
+                {/* Header */}
+                <div className="mb-10">
+                    <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-widest mb-3">Welcome</p>
+                    <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight mb-2">Sign in</h1>
+                    <p className="text-sm text-[var(--muted)] font-mono leading-relaxed">
+                        Connect your GitHub account to get started with agentic workflows.
+                    </p>
                 </div>
 
-                {/* Additional Info */}
-                <p className="text-center text-sm text-gray-500 mt-6">
-                    By continuing, you agree to our Terms of Service and Privacy Policy
+                {/* GitHub Button */}
+                <button
+                    onClick={handleGitHubLogin}
+                    disabled={loading}
+                    className="flex items-center gap-3 px-5 py-3.5 rounded-lg bg-[var(--foreground)] text-[var(--background)] text-sm font-mono font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                >
+                    <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.868-.013-1.703-2.782.603-3.369-1.343-3.369-1.343-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.546 2.91 1.185.092-.923.35-1.546.636-1.903-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0110 4.817c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C17.137 18.191 20 14.44 20 10.017 20 4.484 15.522 0 10 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>{loading ? 'Signing in...' : 'Sign in with GitHub'}</span>
+                </button>
+
+                {/* Spacer */}
+                <div className="flex-1" />
+
+                {/* Footer */}
+                <p className="text-xs font-mono text-[var(--muted)] leading-relaxed">
+                    By continuing, you agree to our{' '}
+                    <span className="text-[var(--foreground-soft)] hover:underline cursor-pointer">Terms of Service</span>
+                    {' '}and{' '}
+                    <span className="text-[var(--foreground-soft)] hover:underline cursor-pointer">Privacy Policy</span>.
                 </p>
             </div>
+
+            {/* Right — Graphics placeholder */}
+            <div className="flex-1 flex items-center justify-center">
+                <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-widest">graphics coming soon</p>
+            </div>
+
         </div>
     );
 }
