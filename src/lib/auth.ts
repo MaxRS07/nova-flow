@@ -1,4 +1,5 @@
 import type { AuthResponse, SignupParams, LoginParams } from '@/types/auth';
+import { Repository } from '@/types/gh_user';
 
 /**
  * Sign up a new user
@@ -69,6 +70,23 @@ export async function logout(): Promise<AuthResponse> {
 
     if (!response.ok) {
         throw new Error(data.error || 'Logout failed');
+    }
+
+    return data;
+}
+
+export async function getUserRepositories(): Promise<Repository[]> {
+    const response = await fetch('/api/user/repositories', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch user repositories');
     }
 
     return data;

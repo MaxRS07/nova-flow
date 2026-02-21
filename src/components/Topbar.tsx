@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import UserMenu from './UserMenu';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 export default function Topbar() {
+    const { user, loading } = useAuth();
     const params = useParams();
-    console.log(params);
     return (
         <header className="h-14 flex items-center justify-between px-6 bg-[var(--surface)] shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className='flex flex-row'>
@@ -35,7 +36,10 @@ export default function Topbar() {
                 <button title="Open Web CLI" className="text-[var(--muted)] hover:text-[var(--foreground-soft)] transition-colors text-xs font-mono tracking-wide">
                     terminal
                 </button>
-                <UserMenu />
+                <UserMenu
+                    user={user}
+                    loading={loading}
+                />
             </div>
         </header>
     );

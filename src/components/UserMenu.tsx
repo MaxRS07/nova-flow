@@ -1,5 +1,6 @@
 'use client';
 
+import { GithubUser } from '@/types/gh_user';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -19,7 +20,7 @@ function applyTheme(theme: Theme) {
   }
 }
 
-export default function UserMenu() {
+export default function UserMenu({ user, loading }: { user: GithubUser | null, loading: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isThemeExpanded, setIsThemeExpanded] = useState(false);
   const [theme, setTheme] = useState<Theme>('system');
@@ -43,7 +44,11 @@ export default function UserMenu() {
         onClick={() => setIsMenuOpen(!isMenuOpen)}
         className="w-7 h-7 rounded-full bg-zinc-700 dark:bg-zinc-600 flex items-center justify-center text-white text-xs font-mono font-semibold cursor-pointer hover:bg-zinc-600 dark:hover:bg-zinc-500 transition-colors"
       >
-        U
+        {loading ? (
+          <div className="w-4 h-4 border-t-2 border-r-2 border-white rounded-full animate-spin" />
+        ) : (
+          <img src={user?.avatar_url || '/default-avatar.png'} alt="User Avatar" className="w-full h-full rounded-full object-cover" />
+        )}
       </button>
 
       {isMenuOpen && (

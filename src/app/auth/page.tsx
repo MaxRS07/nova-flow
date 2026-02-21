@@ -1,9 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSystemTheme } from '@/hooks/useSystemTheme';
 
 export default function AuthPage() {
     const [loading, setLoading] = useState(false);
+    const isDark = useSystemTheme();
+
+    useEffect(() => {
+        // Apply system theme to html element
+        if (isDark !== null) {
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        }
+    }, [isDark]);
 
     const handleGitHubLogin = async () => {
         setLoading(true);

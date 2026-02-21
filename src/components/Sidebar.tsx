@@ -11,7 +11,7 @@ export default function Sidebar() {
     const activeItem = pathname.split('/')[1] || '';
 
     const menuItems = [
-        { id: '', label: 'dashboard' },
+        { id: 'dashboard', label: 'dashboard' },
         { id: 'test', label: 'test' },
         { id: 'git_workflows', label: 'git workflows' },
         { id: 'settings', label: 'settings' },

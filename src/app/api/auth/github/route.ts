@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createJWT } from "@/lib/jwt";
 import { GithubUser } from "@/types/gh_user";
+import { stat } from "fs";
 
 const {
     GITHUB_CLIENT_ID,
@@ -95,6 +96,7 @@ export async function GET(req: NextRequest) {
             return NextResponse.redirect("http://localhost:3000/login?error=state_mismatch");
         }
 
+        console.log(code, state);
         try {
             const accessToken = await exchangeCodeForToken(code);
 
@@ -128,6 +130,5 @@ export async function GET(req: NextRequest) {
             return NextResponse.redirect("http://localhost:3000/login?error=oauth_failed");
         }
     }
-
     return NextResponse.redirect("http://localhost:3000/login?error=invalid_action");
 }

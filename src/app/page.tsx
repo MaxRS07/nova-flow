@@ -112,7 +112,6 @@ export default function Home() {
 
           {/* Footer links */}
           <div className="mt-8 flex items-center gap-5 text-sm font-mono text-[var(--muted)]">
-            <span className="text-[var(--border)]">·</span>
             <button className="hover:text-[var(--foreground-soft)] transition-colors">view reports</button>
             <span className="text-[var(--border)]">·</span>
             <button className="hover:text-[var(--foreground-soft)] transition-colors">docs</button>

@@ -2,22 +2,19 @@
 
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
+import Dropdown from '@/components/Dropdown';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
 
 export default function TestPage() {
     const params = useParams();
     const repositoryId = params.repository_id;
-    const [selectedTestSuites, setSelectedTestSuites] = useState<string[]>(['all']);
+    const [testUrl, setTestUrl] = useState<string>('');
+    const [subpages, setSubpages] = useState<string[]>([]);
     const [agentCount, setAgentCount] = useState(4);
     const [isLaunching, setIsLaunching] = useState(false);
-
-    const testSuites = [
-        { id: 'all', name: 'All Tests', count: 24 },
-        { id: 'unit', name: 'Unit Tests', count: 8 },
-        { id: 'integration', name: 'Integration Tests', count: 10 },
-        { id: 'e2e', name: 'E2E Tests', count: 6 },
-    ];
+    const [selectedConfig, setSelectedConfig] = useState('default');
+    const [lastUsedConfig, setLastUsedConfig] = useState('default');
 
     const recentRuns = [
         { id: 1, timestamp: '2h ago', agents: 4, tests: 24, passed: 22, failed: 2, duration: '2m 34s' },
@@ -30,12 +27,15 @@ export default function TestPage() {
         // Simulate launch
         await new Promise(resolve => setTimeout(resolve, 1500));
         setIsLaunching(false);
-        console.log('Launching test fleet with:', {
-            repository: repositoryId,
-            testSuites: selectedTestSuites,
-            agents: agentCount,
-            timestamp: new Date().toISOString(),
-        });
+    };
+
+    const isValidUrl = (url: string) => {
+        try {
+            new URL(url);
+            return true;
+        } catch {
+            return false;
+        }
     };
 
     return (
@@ -49,7 +49,7 @@ export default function TestPage() {
                     <div className="max-w-5xl mx-auto px-10 py-12">
 
                         {/* Header */}
-                        <div className="mb-10">
+                        <div className="mb-5">
                             <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-widest mb-2">Repository · {repositoryId}</p>
                             <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight mb-2">Test Fleet</h1>
                             <p className="text-sm text-[var(--muted)] font-mono">Launch and manage your agent-powered test execution</p>
@@ -57,8 +57,22 @@ export default function TestPage() {
 
                         {/* Configuration Section */}
                         <div className="bg-[var(--surface)] rounded-xl p-6 mb-8" style={{ border: '1px solid var(--border-subtle)' }}>
-                            <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-6">Configuration</p>
-
+                            <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-6">Agent Configuration</p>
+                            {/* Agent Config Dropdown */}
+                            <div className="mb-6">
+                                <Dropdown
+                                    label="Configuration Profile"
+                                    options={[
+                                        { value: 'default', label: 'Default Config' },
+                                        { value: 'config1', label: 'Config 1' },
+                                        { value: 'config2', label: 'Config 2' },
+                                    ]}
+                                    value={selectedConfig}
+                                    onChange={setSelectedConfig}
+                                    onCreate={() => { }}
+                                    lastUsedValue={lastUsedConfig}
+                                />
+                            </div>
                             {/* Agent Count */}
                             <div className="mb-8">
                                 <label className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
@@ -80,67 +94,90 @@ export default function TestPage() {
                                 <p className="text-xs text-[var(--muted)] font-mono mt-2">Higher agent count = faster parallel test execution</p>
                             </div>
 
-                            {/* Test Suites */}
+                            {/* Test URL */}
                             <div>
                                 <label className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
-                                    Test Suites
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {testSuites.map((suite) => (
-                                        <button
-                                            key={suite.id}
-                                            onClick={() => {
-                                                if (suite.id === 'all') {
-                                                    setSelectedTestSuites(selectedTestSuites.includes('all') ? [] : ['all']);
-                                                } else {
-                                                    const newSuites = selectedTestSuites.filter(s => s !== 'all');
-                                                    if (selectedTestSuites.includes(suite.id)) {
-                                                        setSelectedTestSuites(newSuites.filter(s => s !== suite.id));
-                                                    } else {
-                                                        setSelectedTestSuites([...newSuites, suite.id]);
-                                                    }
-                                                }
-                                            }}
-                                            className={`p-4 rounded-lg border-2 transition-all text-left font-mono text-sm ${selectedTestSuites.includes(suite.id) || (suite.id === 'all' && selectedTestSuites.includes('all'))
-                                                ? 'border-blue-500 bg-blue-500/10'
-                                                : 'border-[var(--border-subtle)] hover:border-[var(--border)]'
-                                                }`}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-semibold text-[var(--foreground)]">{suite.name}</span>
-                                                <span className="text-xs text-[var(--muted)]">{suite.count}</span>
+                                    <span className="flex items-center gap-4">
+                                        Test URL
+                                        <span className="relative group cursor-help inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--muted-bg)] hover:bg-[var(--border-subtle)] text-[var(--foreground-soft)] transition-colors text-xs font-semibold">
+                                            i
+                                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-3 py-2 w-min z-10">
+                                                URL of your application to test. The test fleet will spawn at this URL and sub-pages.
                                             </div>
-                                        </button>
-                                    ))}
-                                </div>
+                                        </span>
+                                    </span>
+                                    <input
+                                        id='test url'
+                                        name='test url'
+                                        type='text'
+                                        value={testUrl}
+                                        onChange={(e) => setTestUrl(e.target.value)}
+                                        placeholder={"https://myapp.com"}
+                                        className="mt-3 w-full p-4 rounded-lg border-2 transition-all text-left font-mono text-sm"
+                                    />
+                                </label>
+                                {subpages.length > 0 && (
+                                    <div className="mt-4">
+                                        <p className="text-xs text-[var(--muted)] font-mono mb-3">Subpages</p>
+                                        <div className="space-y-2">
+                                            {subpages.map((subpage, index) => (
+                                                <div key={index} className="flex gap-2 items-center">
+                                                    <span className="text-[var(--muted)] text-sm font-mono">/</span>
+                                                    <input
+                                                        id={`subpage-${index}`}
+                                                        type='text'
+                                                        value={subpage}
+                                                        onChange={(e) => {
+                                                            const updated = [...subpages];
+                                                            updated[index] = e.target.value;
+                                                            setSubpages(updated);
+                                                        }}
+                                                        placeholder={"dashboard"}
+                                                        className="flex-1 p-3 rounded-lg border border-[var(--border-subtle)] transition-all text-left font-mono text-sm bg-[var(--background)]"
+                                                    />
+                                                    <button
+                                                        onClick={() => setSubpages(subpages.filter((_, i) => i !== index))}
+                                                        className="px-3 py-2 text-xs font-mono text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <button
+                                    type='button'
+                                    title='Add subpage'
+                                    onClick={() => setSubpages(prev => [...prev, ''])}
+                                    className="mt-3 px-3 py-2 text-xs font-mono text-[var(--accent)] hover:bg-[var(--muted-bg)] rounded-lg transition-colors border border-[var(--border-subtle)]"
+                                >
+                                    + Add Subpage
+                                </button>
                             </div>
                         </div>
 
                         {/* Launch Section */}
-                        <div className="bg-(--surface) rounded-xl p-6 mb-8" style={{ border: '1px solid var(--border-subtle)' }}>
-                            <p className="text-xs font-mono text-(--muted) uppercase tracking-wider mb-4">Ready to start</p>
+                        <div className="bg-[var(--surface)] rounded-xl p-6 mb-8" style={{ border: '1px solid var(--border-subtle)' }}>
+                            <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-4">Ready to start</p>
                             <div className="grid grid-cols-3 gap-4 mb-6">
                                 <div>
-                                    <p className="text-xs text-(--muted) font-mono mb-1">agents</p>
+                                    <p className="text-xs text-[var(--muted)] font-mono mb-1">agents</p>
                                     <p className="text-2xl font-mono font-bold text-foreground">{agentCount}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-(--muted) font-mono mb-1">test suites selected</p>
-                                    <p className="text-2xl font-mono font-bold text-foreground">{selectedTestSuites.length}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-(--muted) font-mono mb-1">estimated tests</p>
+                                    <p className="text-xs text-[var(--muted)] font-mono mb-1">estimated tests</p>
                                     <p className="text-2xl font-mono font-bold text-blue-500">24</p>
                                 </div>
                             </div>
                             <button
                                 onClick={handleLaunchTests}
-                                disabled={isLaunching || selectedTestSuites.length === 0}
-                                className={`w-full py-3 rounded-lg font-semibold transition-all border ${isLaunching || selectedTestSuites.length === 0
-                                    ? 'text-(--muted) cursor-not-allowed border-(--muted)'
+                                disabled={isLaunching || !isValidUrl(testUrl)}
+                                className={`w-full py-3 rounded-lg font-semibold transition-all border ${isLaunching || !isValidUrl(testUrl)
+                                    ? 'text-[var(--muted)] cursor-not-allowed border-[var(--muted)]'
                                     : 'text-white hover:shadow-lg hover:cursor-pointer '
                                     }`}
-                                style={isLaunching || selectedTestSuites.length === 0
+                                style={isLaunching || !isValidUrl(testUrl)
                                     ? { borderColor: 'var(--border)' }
                                     : { borderColor: 'var(--muted)' }}
                             >
@@ -149,13 +186,13 @@ export default function TestPage() {
                         </div>
 
                         {/* Recent Runs */}
-                        <div className="bg-(--surface) rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
-                            <div className="px-6 py-4 bg-(--muted-bg)" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                <p className="text-xs font-mono text-(--muted) uppercase tracking-wider">Recent Test Runs</p>
+                        <div className="bg-[var(--surface)] rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+                            <div className="px-6 py-4 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">Recent Test Runs</p>
                             </div>
-                            <div className="grid grid-cols-[1fr_0.8fr_0.8fr_1fr_1fr_0.8fr] px-6 py-3 bg-(--muted-bg)" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                            <div className="grid grid-cols-[1fr_0.8fr_0.8fr_1fr_1fr_0.8fr] px-6 py-3 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
                                 {['time', 'agents', 'tests', 'passed', 'failed', 'duration'].map((col) => (
-                                    <span key={col} className="text-xs font-mono text-(--muted) uppercase tracking-wider">{col}</span>
+                                    <span key={col} className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">{col}</span>
                                 ))}
                             </div>
                             {recentRuns.map((run, i) => (
@@ -173,7 +210,6 @@ export default function TestPage() {
                                 </div>
                             ))}
                         </div>
-
                     </div>
                 </main>
             </div>
