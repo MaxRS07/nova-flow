@@ -40,3 +40,43 @@ body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
 }
+
+/* Checkbox styles */
+input[type='checkbox'].app-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+input[type='checkbox'].app-checkbox:hover:not(:checked) {
+  border-color: var(--accent);
+}
+
+input[type='checkbox'].app-checkbox:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+input[type='checkbox'].app-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  color: white;
+  font-weight: bold;
+  font-size: 10px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+input[type='checkbox'].app-checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

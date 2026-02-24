@@ -58,6 +58,7 @@ export default function UserMenu({ user, loading }: { user: GithubUser | null, l
             <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
               <div className="px-4 py-2.5 hover:bg-(--muted-bg) cursor-pointer text-(--foreground-soft) font-mono text-xs">
                 Profile
+                <span className="block text-(--muted) text-xs">{user?.login}</span>
               </div>
             </Link>
 

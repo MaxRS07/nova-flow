@@ -34,6 +34,15 @@ export interface GithubUser {
     updated_at: string
 }
 
+export interface RepositoryData {
+    has_next_page: boolean
+    has_prev_page: boolean
+    page: number
+    per_page: number
+    total: number
+    repositories: Repository[]
+    total_count: number
+}
 export interface Repository {
     id: number
     node_id: string

@@ -3,28 +3,9 @@
 import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
+import MarkdownEditor from '@/components/MarkdownEditor';
 import Link from 'next/link';
-
-function InfoIcon({ text }: { text: string }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        className="ml-2 text-[var(--muted)] hover:text-[var(--foreground-soft)] transition-colors text-xs font-mono w-4 h-4 rounded-full bg-[var(--muted-bg)] inline-flex items-center justify-center"
-      >
-        ?
-      </button>
-      {show && (
-        <div className="absolute left-0 top-6 w-56 bg-[var(--surface)] text-[var(--foreground-soft)] text-xs rounded-lg shadow-lg p-3 z-10 font-mono leading-relaxed" style={{ border: '1px solid var(--border)' }}>
-          {text}
-        </div>
-      )}
-    </div>
-  );
-}
+import InfoIcon from '@/components/InfoIcon';
 
 export default function NewModel() {
   const [name, setName] = useState('');
@@ -32,6 +13,27 @@ export default function NewModel() {
   const [actions, setActions] = useState(['']);
   const [context, setContext] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [showConfig, setShowConfig] = useState(false);
+  const [temperature, setTemperature] = useState(0.7);
+  const [topP, setTopP] = useState(0.9);
+  const [maxTokens, setMaxTokens] = useState(2048);
+  const [selectedTools, setSelectedTools] = useState<string[]>([]);
+  const [toolInput, setToolInput] = useState('');
+
+  const availableTools = [
+    'web_search',
+    'code_execution',
+    'file_reader',
+    'api_caller',
+    'database_query',
+    'email_sender',
+  ];
+
+  const toggleTool = (tool: string) => {
+    setSelectedTools(prev =>
+      prev.includes(tool) ? prev.filter(t => t !== tool) : [...prev, tool]
+    );
+  };
 
   const addAction = () => setActions([...actions, '']);
   const removeAction = (i: number) => setActions(actions.filter((_, idx) => idx !== i));
@@ -43,7 +45,22 @@ export default function NewModel() {
     const allowed = ['.pdf', '.txt', '.md', '.json', '.csv', '.doc', '.docx'];
     setFiles([...files, ...Array.from(e.target.files).filter((f) => allowed.some((ext) => f.name.endsWith(ext)))]);
   };
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); console.log({ name, url, actions, context, files }); };
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({
+      name,
+      url,
+      actions,
+      context,
+      files,
+      config: {
+        temperature,
+        topP,
+        maxTokens,
+      },
+      selectedTools,
+    });
+  };
 
   const inputClass = 'w-full px-4 py-3 text-sm font-mono rounded-lg bg-[var(--muted-bg)] text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30 transition-all';
   const labelClass = 'flex items-center text-xs font-mono font-medium text-[var(--muted)] uppercase tracking-wider mb-2.5';
@@ -59,9 +76,9 @@ export default function NewModel() {
           <div className="max-w-3xl mx-auto px-10 py-12">
 
             <div className="mb-10">
-              <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-widest mb-2">Models</p>
-              <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight">New Model</h1>
-              <p className="text-sm text-[var(--muted)] font-mono mt-1.5">Configure a new AI model with actions and context</p>
+              <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-widest mb-2">Agents</p>
+              <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight">New Agent</h1>
+              <p className="text-sm text-[var(--muted)] font-mono mt-1.5">Configure a new agent with actions and context</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8">
@@ -71,14 +88,6 @@ export default function NewModel() {
                   Name <InfoIcon text="A unique identifier for your model, shown in the model list." />
                 </label>
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="my-model" className={inputClass} required />
-              </div>
-
-              {/* URL */}
-              <div>
-                <label className={labelClass}>
-                  URL <InfoIcon text="The endpoint your model will use to interact with external services." />
-                </label>
-                <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://example.com" className={inputClass} required />
               </div>
 
               {/* Actions */}
@@ -116,14 +125,13 @@ export default function NewModel() {
               {/* Context */}
               <div>
                 <label className={labelClass}>
-                  Context <InfoIcon text="Instructions and guidelines that guide the model's behavior." />
+                  Context <InfoIcon text="Instructions and guidelines that guide the model's behavior. Supports markdown syntax." />
                 </label>
-                <textarea
+                <MarkdownEditor
                   value={context}
-                  onChange={(e) => setContext(e.target.value)}
+                  onChange={setContext}
                   placeholder="Add context and instructions for the model..."
                   rows={8}
-                  className={`${inputClass} resize-none leading-relaxed`}
                 />
               </div>
 
@@ -157,6 +165,94 @@ export default function NewModel() {
                 )}
               </div>
 
+              {/* Additional parameters dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowConfig(!showConfig)}
+                  className="text-sm font-mono text-[var(--accent)] hover:opacity-80 transition-opacity"
+                >
+                  Config {showConfig ? '−' : '+'}
+                </button>
+
+                {showConfig && (
+                  <div className="absolute top-8 left-0 w-full bg-[var(--surface)] rounded-lg shadow-lg p-6 z-20 space-y-6" style={{ border: '1px solid var(--border)' }}>
+                    {/* Temperature */}
+                    <div>
+                      <label className="block text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
+                        Temperature: <span className="text-[var(--foreground)]">{temperature.toFixed(2)}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="2"
+                        step="0.1"
+                        value={temperature}
+                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-[var(--muted-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1.5">Controls randomness. 0 = deterministic, 2 = very random</p>
+                    </div>
+
+                    {/* Top-P */}
+                    <div>
+                      <label className="block text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
+                        Top-P: <span className="text-[var(--foreground)]">{topP.toFixed(2)}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={topP}
+                        onChange={(e) => setTopP(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-[var(--muted-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1.5">Nucleus sampling. Controls diversity of outputs</p>
+                    </div>
+
+                    {/* Max Tokens */}
+                    <div>
+                      <label className="block text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
+                        Max Tokens: <span className="text-[var(--foreground)]">{maxTokens}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min="256"
+                        max="4096"
+                        step="256"
+                        value={maxTokens}
+                        onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                        className="w-full h-2 bg-[var(--muted-bg)] rounded-lg appearance-none cursor-pointer accent-[var(--accent)]"
+                      />
+                      <p className="text-xs text-[var(--muted)] mt-1.5">Maximum response length in tokens</p>
+                    </div>
+
+                    {/* Tools Section */}
+                    <div className="pt-4 border-t border-[var(--border)]">
+                      <label className="block text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-3">
+                        Tools
+                      </label>
+                      <div className="space-y-2">
+                        {availableTools.map((tool) => (
+                          <label key={tool} className="flex items-center gap-2 cursor-pointer hover:bg-[var(--muted-bg)] p-2 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={selectedTools.includes(tool)}
+                              onChange={() => toggleTool(tool)}
+                              className="app-checkbox"
+                            />
+                            <span className="text-sm font-mono text-[var(--foreground-soft)]">{tool}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={(e) => { e.preventDefault(); setTemperature(0.7); setTopP(0.9); setMaxTokens(2048); setSelectedTools([]); }}>
+                      Reset to defaults
+                    </button>
+                  </div>
+                )}
+              </div>
               {/* Submit */}
               <div className="flex gap-3 pt-4">
                 <button type="submit" className="px-6 py-3 text-sm font-mono bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition-opacity">

@@ -2,11 +2,19 @@
 
 import Link from 'next/link';
 import UserMenu from './UserMenu';
+import WebCLI from './WebCLI';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+
 export default function Topbar() {
     const { user, loading } = useAuth();
     const params = useParams();
+    const [webCLIOpen, setWebCLIOpen] = useState(false);
+
+    const toggleWebCLI = () => {
+        setWebCLIOpen(!webCLIOpen);
+    };
     return (
         <header className="h-14 flex items-center justify-between px-6 bg-[var(--surface)] shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className='flex flex-row'>
@@ -33,7 +41,11 @@ export default function Topbar() {
             </div>
 
             <div className="flex items-center gap-4">
-                <button title="Open Web CLI" className="text-[var(--muted)] hover:text-[var(--foreground-soft)] transition-colors text-xs font-mono tracking-wide">
+                <button
+                    onClick={toggleWebCLI}
+                    title="Open Web CLI"
+                    className="text-[var(--muted)] hover:text-[var(--foreground-soft)] transition-colors text-xs font-mono tracking-wide"
+                >
                     terminal
                 </button>
                 <UserMenu
@@ -41,6 +53,8 @@ export default function Topbar() {
                     loading={loading}
                 />
             </div>
+
+            <WebCLI isOpen={webCLIOpen} onClose={() => setWebCLIOpen(false)} />
         </header>
     );
 }

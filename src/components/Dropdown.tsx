@@ -12,7 +12,6 @@ interface DropdownProps {
     value: string;
     onChange?: (value: string) => void;
     onCreate?: () => void;
-    label?: string;
     lastUsedValue?: string;
     placeholder?: string;
 }
@@ -22,7 +21,6 @@ export default function Dropdown({
     value,
     onChange,
     onCreate,
-    label,
     lastUsedValue,
     placeholder,
 }: DropdownProps) {
@@ -50,11 +48,6 @@ export default function Dropdown({
 
     return (
         <div>
-            {label && (
-                <label className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
-                    {label}
-                </label>
-            )}
             <div className="relative" ref={dropdownRef}>
                 {/* Dropdown Trigger Button */}
                 <button
@@ -62,7 +55,7 @@ export default function Dropdown({
                     className="w-full p-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] text-[var(--foreground)] font-mono text-sm transition-all focus:outline-none focus:border-[var(--accent)] cursor-pointer hover:border-[var(--muted)] flex items-center justify-between"
                 >
                     <span>{selectedOption?.label || placeholder}</span>
-                    <span className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}>▼</span>
+                    <img src={'/expand.svg'} className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}

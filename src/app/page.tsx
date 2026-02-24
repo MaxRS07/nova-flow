@@ -2,17 +2,18 @@
 
 import Topbar from '@/components/Topbar';
 import RepositoryConnectCard from '@/components/RepositoryConnectCard';
+import { useProjects } from '@/contexts/ProjectsContext';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 export default function Home() {
-  const [projects, setProjects] = useState<{ id: number; name: string; url: string; tests: number; status: string }[]>([]);
+  const { projects, addProject, removeProject } = useProjects();
   const [connectPageOpen, setConnectPageOpen] = useState(false);
 
   const router = useRouter();
 
   const handleDeleteRepository = (id: number) => {
-    setProjects(projects.filter((p) => p.id !== id));
+    removeProject(id);
   };
 
   return (
@@ -23,14 +24,7 @@ export default function Home() {
         isOpen={connectPageOpen}
         onClose={() => setConnectPageOpen(false)}
         onConnect={(repo) => {
-          const newProject = {
-            id: repo.id,
-            name: repo.name,
-            url: repo.url,
-            tests: Math.floor(Math.random() * 20) + 1,
-            status: 'passing',
-          }
-          setProjects(prev => [...prev, newProject]);
+          addProject(repo);
           setConnectPageOpen(false);
         }}
       />
@@ -45,7 +39,7 @@ export default function Home() {
               <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight">Projects</h1>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-sm text-[var(--muted)] font-mono">{projects.length} connected</span>
+              <span className="text-sm text-[var(--muted)] font-mono">{Object.keys(projects).length} connected</span>
               <button
                 onClick={() => setConnectPageOpen(true)}
                 className="px-4 py-2 text-sm font-mono bg-[var(--accent)] text-white rounded-lg hover:opacity-90 transition-opacity"
@@ -65,7 +59,7 @@ export default function Home() {
             </div>
 
             {/* Rows */}
-            {projects.length === 0 ? (
+            {Object.keys(projects).length === 0 ? (
               <div className="px-6 py-20 text-center">
                 <p className="text-[var(--muted)] font-mono text-sm mb-2">No projects yet</p>
                 <button onClick={() => setConnectPageOpen(true)} className="text-[var(--accent)] text-sm font-mono hover:underline">
@@ -73,21 +67,17 @@ export default function Home() {
                 </button>
               </div>
             ) : (
-              projects.map((proj, i) => (
+              Object.values(projects).map((proj, i) => (
                 <div
                   key={proj.id}
                   className="grid grid-cols-[2fr_3fr_1fr_1fr_1fr] px-6 py-5 group hover:bg-[var(--muted-bg)] transition-colors cursor-pointer"
-                  style={i < projects.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}}
+                  style={i < Object.keys(projects).length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}}
                   onClick={() => router.push(`/repository/${proj.id}/dashboard`)}
                 >
                   <span className="font-mono text-sm font-medium text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">
                     {proj.name}
                   </span>
                   <span className="font-mono text-sm text-[var(--muted)] truncate pr-4">{proj.url}</span>
-                  <span className="font-mono text-sm text-[var(--foreground-soft)]">{proj.tests}</span>
-                  <span className={`font-mono text-sm ${proj.status === 'passing' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {proj.status}
-                  </span>
                   <div
                     className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => e.stopPropagation()}

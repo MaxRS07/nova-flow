@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProjectsProvider } from "@/contexts/ProjectsContext";
 import RouteWrapper from "@/components/RouteWrapper";
 import "./globals.css";
 
@@ -30,9 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[var(--background)] text-[var(--foreground)]`}
       >
         <AuthProvider>
-          <RouteWrapper>
-            {children}
-          </RouteWrapper>
+          <ProjectsProvider>
+            <RouteWrapper>
+              {children}
+            </RouteWrapper>
+          </ProjectsProvider>
         </AuthProvider>
       </body>
     </html>

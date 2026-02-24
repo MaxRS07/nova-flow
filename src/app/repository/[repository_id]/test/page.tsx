@@ -5,6 +5,8 @@ import Topbar from '@/components/Topbar';
 import Dropdown from '@/components/Dropdown';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import InfoIcon from '@/components/InfoIcon';
 
 export default function TestPage() {
     const params = useParams();
@@ -15,6 +17,7 @@ export default function TestPage() {
     const [isLaunching, setIsLaunching] = useState(false);
     const [selectedConfig, setSelectedConfig] = useState('default');
     const [lastUsedConfig, setLastUsedConfig] = useState('default');
+    const [userAgents, setUserAgents] = useState<string[]>(['default-ui-agent']);
 
     const recentRuns = [
         { id: 1, timestamp: '2h ago', agents: 4, tests: 24, passed: 22, failed: 2, duration: '2m 34s' },
@@ -38,6 +41,8 @@ export default function TestPage() {
         }
     };
 
+    const router = useRouter();
+
     return (
         <div className="flex flex-col h-screen bg-[var(--background)]">
             <Topbar />
@@ -59,9 +64,12 @@ export default function TestPage() {
                         <div className="bg-[var(--surface)] rounded-xl p-6 mb-8" style={{ border: '1px solid var(--border-subtle)' }}>
                             <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-6">Agent Configuration</p>
                             {/* Agent Config Dropdown */}
+                            <span className="text-sm font-mono text-[var(--foreground-soft)] mb-3 block">Configuration Profile
+                                <InfoIcon text="Configure your test fleet by selecting an agent configuration profile, customizing user agents for diverse test execution, and setting the number of parallel agents to optimize testing speed." />
+                            </span>
+
                             <div className="mb-6">
                                 <Dropdown
-                                    label="Configuration Profile"
                                     options={[
                                         { value: 'default', label: 'Default Config' },
                                         { value: 'config1', label: 'Config 1' },
@@ -73,8 +81,51 @@ export default function TestPage() {
                                     lastUsedValue={lastUsedConfig}
                                 />
                             </div>
+                            { /* Edit Agent */}
+                            <div>
+                                <span className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
+                                    User Agents
+                                    <InfoIcon text="Select user agents to simulate different browsers and devices during test execution. The agent's exploratory behavior can also be configured." />
+                                </span>
+                                <div className="space-y-3">
+                                    {userAgents.map((agent, i) => (
+                                        <div key={i} className="flex gap-3 items-center">
+                                            <div className="flex-1">
+                                                <Dropdown
+                                                    options={[{ value: 'default-ui-agent', label: 'Default UI Testing Agent' }]}
+                                                    value={agent}
+                                                    onChange={(value) => setUserAgents(prev => {
+                                                        const updated = [...prev];
+                                                        updated[i] = value;
+                                                        return updated;
+                                                    })}
+                                                    onCreate={() => router.push(`/repository/${repositoryId}/agents/new`)}
+                                                    lastUsedValue={''}
+                                                />
+                                            </div>
+                                            {userAgents.length > 1 &&
+                                                <button
+                                                    onClick={() => setUserAgents(prev => prev.filter((_, idx) => idx !== i))}
+                                                    className="px-3 py-2 text-xs font-mono text-red-500 hover:bg-red-500/10 rounded-lg transition-colors border border-[var(--border-subtle)] whitespace-nowrap"
+                                                >
+                                                    Remove
+                                                </button>
+                                            }
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    type='button'
+                                    onClick={() => userAgents.length < 5 && setUserAgents(prev => [...prev, 'default-ui-agent'])}
+                                    disabled={userAgents.length >= 5}
+                                    className="mt-3 px-3 py-2 text-xs font-mono text-[var(--accent)] hover:bg-[var(--muted-bg)] rounded-lg transition-colors border border-[var(--border-subtle)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    + Add Agent
+                                </button>
+                                <span className="text-xs text-[var(--muted)] font-mono mt-2 block">{userAgents.length}/5</span>
+                            </div>
                             {/* Agent Count */}
-                            <div className="mb-8">
+                            <div className="mt-4 mb-8">
                                 <label className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
                                     Parallel Agents
                                 </label>
@@ -99,13 +150,9 @@ export default function TestPage() {
                                 <label className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">
                                     <span className="flex items-center gap-4">
                                         Test URL
-                                        <span className="relative group cursor-help inline-flex items-center justify-center w-5 h-5 rounded-full bg-[var(--muted-bg)] hover:bg-[var(--border-subtle)] text-[var(--foreground-soft)] transition-colors text-xs font-semibold">
-                                            i
-                                            <div className="hidden group-hover:block absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-3 py-2 w-min z-10">
-                                                URL of your application to test. The test fleet will spawn at this URL and sub-pages.
-                                            </div>
-                                        </span>
+                                        <InfoIcon text="URL of your application to test. The test fleet will spawn at this URL and sub-pages." />
                                     </span>
+
                                     <input
                                         id='test url'
                                         name='test url'
@@ -113,7 +160,7 @@ export default function TestPage() {
                                         value={testUrl}
                                         onChange={(e) => setTestUrl(e.target.value)}
                                         placeholder={"https://myapp.com"}
-                                        className="mt-3 w-full p-4 rounded-lg border-2 transition-all text-left font-mono text-sm"
+                                        className="mt-4 w-full flex-1 p-3 rounded-lg border border-[var(--border-subtle)] transition-all text-left font-mono text-sm bg-[var(--background)]"
                                     />
                                 </label>
                                 {subpages.length > 0 && (

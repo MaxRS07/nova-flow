@@ -1,5 +1,5 @@
 import type { AuthResponse, SignupParams, LoginParams } from '@/types/auth';
-import { Repository } from '@/types/gh_user';
+import { Repository, RepositoryData } from '@/types/gh_user';
 
 /**
  * Sign up a new user
@@ -75,8 +75,8 @@ export async function logout(): Promise<AuthResponse> {
     return data;
 }
 
-export async function getUserRepositories(): Promise<Repository[]> {
-    const response = await fetch('/api/user/repositories', {
+export async function getUserRepositories(page: number, perPage: number): Promise<RepositoryData> {
+    const response = await fetch(`/api/auth/github/repos?page=${page}&per_page=${perPage}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

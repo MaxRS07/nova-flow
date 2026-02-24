@@ -87,7 +87,28 @@ export async function GET(req: NextRequest) {
     }
 
     if (action === "callback") {
-        // Step 2: GitHub redirected back with ?code & ?state
+        const installationId = url.searchParams.get("installation_id");
+        const setupAction = url.searchParams.get("setup_action");
+
+        // 🟢 GITHUB APP INSTALL FLOW
+        if (installationId) {
+            console.log("GitHub App installed:", installationId, setupAction);
+
+            const res = NextResponse.redirect("http://localhost:3000/");
+
+            // Optional: store installationId in cookie (temporary demo)
+            res.cookies.set("github_installation_id", installationId, {
+                httpOnly: true,
+                sameSite: "lax",
+                secure: isProduction,
+                path: "/",
+                maxAge: 60 * 60 * 24 * 7,
+            });
+
+            return res;
+        }
+
+        // 🔵 OAUTH LOGIN FLOW
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
         const expectedState = req.cookies.get("oauth_state")?.value;
@@ -96,18 +117,14 @@ export async function GET(req: NextRequest) {
             return NextResponse.redirect("http://localhost:3000/login?error=state_mismatch");
         }
 
-        console.log(code, state);
         try {
             const accessToken = await exchangeCodeForToken(code);
-
             const user = await fetchGitHubUser(accessToken);
 
-            // Clear state cookie
-            const res = NextResponse.redirect("http://localhost:3000/"); // Or any frontend route
+            const res = NextResponse.redirect("http://localhost:3000/");
 
             res.cookies.set("oauth_state", "", { path: "/", maxAge: 0 });
 
-            // Create JWT with user data and store in session cookie
             const sessionJWT = createJWT({
                 github_id: user.id,
                 login: user.login,
@@ -121,7 +138,7 @@ export async function GET(req: NextRequest) {
                 sameSite: "lax",
                 secure: isProduction,
                 path: "/",
-                maxAge: 60 * 60 * 24 * 7, // 7 days
+                maxAge: 60 * 60 * 24 * 7,
             });
 
             return res;
