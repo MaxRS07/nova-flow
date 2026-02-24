@@ -19,11 +19,18 @@ export async function fetchUserRepos(): Promise<Repository[]> {
         return [];
     }
 }
-
-export async function fetchRepoTree(owner: string, repo: string, ref?: string) {
+/**
+ * Get repository tree or YAML files from a repository
+ * @param owner 
+ * @param repo 
+ * @param ref 
+ * @param operation 'content' or 'yaml-files'
+ * @returns 
+ */
+export async function fetchRepoTree(owner: string, repo: string, ref?: string, operation: string = "yaml-files") {
     try {
         const url = new URL("/api/auth/github/repos", window.location.origin);
-        url.searchParams.append("operation", "yaml-files");
+        url.searchParams.append("operation", operation);
         url.searchParams.append("owner", owner);
         url.searchParams.append("repo", repo);
         if (ref) url.searchParams.append("ref", ref);

@@ -1,0 +1,18 @@
+# Testing CI detection for GitHub Actions
+
+name: CI Build and Test
+
+on: [push]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check out repository code
+              uses: actions/checkout@v4
+            - name: Run a one-line script
+              run: echo "Hello, world! This job runs on ${{ runner.os }}."
+            - name: Run a multi-line script
+              run: |
+                  echo "This job has multiple lines"
+                  echo "and runs multiple commands."
