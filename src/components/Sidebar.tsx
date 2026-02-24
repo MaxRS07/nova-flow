@@ -3,9 +3,11 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useProjects } from '@/contexts/ProjectsContext';
 
 export default function Sidebar() {
     const { repository_id } = useParams();
+    const project = useProjects().getProject(Number(repository_id));
 
     const pathname = usePathname();
     const activeItem = pathname.split('/')[1] || '';

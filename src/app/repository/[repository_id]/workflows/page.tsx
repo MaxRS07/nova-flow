@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
-import { fetchRepoTree } from '@/lib/github';
+import { fetchRepoContent, fetchRepoYAML } from '@/lib/github';
 import { useProjects } from '@/contexts/ProjectsContext';
+import YAML from 'yaml'
 
 interface CIPipeline {
+    name?: string;
     path: string;
     fileName: string;
     type: string;
@@ -51,8 +53,7 @@ export default function WorkflowsPage() {
 
                 if (project) {
                     setRepositoryInfo({ owner: project.owner.login, repo: project.name });
-                    const result = await fetchRepoTree(project.owner.login, project.name);
-                    console.log(result);
+                    const result = await fetchRepoYAML(project.owner.login, project.name);
 
                     if (result && result.yamlFiles) {
                         const ciPipelines: CIPipeline[] = result.yamlFiles
@@ -73,7 +74,25 @@ export default function WorkflowsPage() {
                             new Map(ciPipelines.map((p) => [p.provider, p])).values()
                         ).sort((a, b) => a.provider.localeCompare(b.provider));
 
-                        setPipelines(uniquePipelines);
+                        // Fetch content for all pipelines in parallel and collect results
+                        const pipelinesWithNames = await Promise.all(
+                            uniquePipelines.map(async (p) => {
+                                try {
+                                    const content = await fetchRepoContent(project.owner.login, project.name, p.path);
+                                    if (content && content.content) {
+                                        const decoded = atob(content.content);
+                                        const parsed = YAML.parse(decoded);
+                                        return { ...p, name: parsed?.name || p.fileName };
+                                    }
+                                } catch (err) {
+                                    console.error(`Failed to parse YAML for ${p.provider}:`, err);
+                                }
+                                return { ...p, name: p.fileName };
+                            })
+                        );
+
+                        // Set state once with all pipelines and their names
+                        setPipelines(pipelinesWithNames);
 
                         if (uniquePipelines.length === 0) {
                             setError('No CI/CD pipeline configurations found in this repository.');
@@ -185,33 +204,32 @@ export default function WorkflowsPage() {
                                         <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">CI/CD Pipeline Configurations</p>
                                     </div>
 
-                                    <div className="grid grid-cols-[2fr_1.5fr_2fr] px-6 py-3 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <div className="grid grid-cols-[2fr_2fr_1fr] px-6 py-3 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                        <span className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">Name</span>
                                         <span className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">File Path</span>
                                         <span className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">Provider</span>
-                                        <span className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">Type</span>
                                     </div>
 
                                     {pipelines.map((pipeline, i) => (
                                         <div
                                             key={i}
-                                            className="grid grid-cols-[2fr_1.5fr_2fr] px-6 py-4 hover:bg-[var(--muted-bg)] transition-colors"
+                                            className="grid grid-cols-[2fr_2fr_1fr] px-6 py-4 hover:bg-[var(--muted-bg)] transition-colors"
                                             style={i < pipelines.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <svg className="w-4 h-4 text-[var(--muted)] shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path d="M5.5 13a3 3 0 01.369-1.495 2 2 0 00-1.64-3.365 2 2 0 00-3.496 3.364A3 3 0 005.5 13m11.979-1.11a6 6 0 10-12.958 0 6 6 0 0012.958 0z" />
-                                                </svg>
-                                                <span className="font-mono text-sm text-[var(--foreground-soft)] truncate" title={pipeline.path}>
+                                            <div className="flex items-center gap-3 min-w-0 pr-2 overflow-x-scroll">
+                                                <span className="font-mono text-sm font-medium text-[var(--foreground)] whitespace-nowrap">
+                                                    {pipeline.name}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3 min-w-0 pr-2 overflow-x-scroll">
+                                                <span className="font-mono text-sm text-[var(--foreground-soft)] whitespace-nowrap" title={pipeline.path}>
                                                     {pipeline.path}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center">
+                                            <div className="flex items-center min-w-0">
                                                 <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${getProviderColor(pipeline.provider)}`}>
                                                     {pipeline.provider}
                                                 </span>
-                                            </div>
-                                            <div>
-                                                <span className="font-mono text-sm text-[var(--muted)]">{pipeline.type}</span>
                                             </div>
                                         </div>
                                     ))}

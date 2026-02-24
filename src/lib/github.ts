@@ -24,13 +24,13 @@ export async function fetchUserRepos(): Promise<Repository[]> {
  * @param owner 
  * @param repo 
  * @param ref 
- * @param operation 'content' or 'yaml-files'
+ * @param operation 'yaml-files'
  * @returns 
  */
-export async function fetchRepoTree(owner: string, repo: string, ref?: string, operation: string = "yaml-files") {
+export async function fetchRepoYAML(owner: string, repo: string, ref?: string) {
     try {
         const url = new URL("/api/auth/github/repos", window.location.origin);
-        url.searchParams.append("operation", operation);
+        url.searchParams.append("operation", 'yaml-files');
         url.searchParams.append("owner", owner);
         url.searchParams.append("repo", repo);
         if (ref) url.searchParams.append("ref", ref);
@@ -45,6 +45,29 @@ export async function fetchRepoTree(owner: string, repo: string, ref?: string, o
         return data;
     } catch (err) {
         console.error("Error fetching repo tree:", err);
+        return null;
+    }
+}
+
+export async function fetchRepoContent(owner: string, repo: string, path: string, ref?: string) {
+    try {
+        const url = new URL("/api/auth/github/repos", window.location.origin);
+        url.searchParams.append("operation", "content");
+        url.searchParams.append("owner", owner);
+        url.searchParams.append("repo", repo);
+        url.searchParams.append("path", path);
+        if (ref) url.searchParams.append("ref", ref);
+
+        const res = await fetch(url.toString(), {
+            method: "GET",
+        });
+        if (!res.ok) {
+            throw new Error(`Failed to fetch repo content: ${res.status}`);
+        }
+        const data = await res.json();
+        return data;
+    } catch (err) {
+        console.error("Error fetching repo content:", err);
         return null;
     }
 }

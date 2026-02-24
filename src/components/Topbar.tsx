@@ -6,12 +6,18 @@ import WebCLI from './WebCLI';
 import { useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState } from 'react';
+import { useProjects } from '@/contexts/ProjectsContext';
 
 export default function Topbar() {
     const { user, loading } = useAuth();
     const params = useParams();
     const [webCLIOpen, setWebCLIOpen] = useState(false);
 
+    const repositoryId = params.repository_id ? Number(params.repository_id) : null;
+    var project = null;
+    if (repositoryId) {
+        project = useProjects().getProject(repositoryId);
+    }
     const toggleWebCLI = () => {
         setWebCLIOpen(!webCLIOpen);
     };
@@ -25,7 +31,7 @@ export default function Topbar() {
                     <>
                         <span className="mx-2 text-[var(--muted)]">/</span>
                         <Link href={`/repository/${params.repository_id}/dashboard`} className="font-mono text-sm font-semibold text-[var(--foreground)] hover:text-[var(--accent)] transition-colors tracking-tight">
-                            {`repo-${params.repository_id}`}
+                            {project ? project.name : `repo-${params.repository_id}`}
                         </Link>
                     </>
                 )}

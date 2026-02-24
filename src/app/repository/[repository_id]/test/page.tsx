@@ -18,11 +18,9 @@ export default function TestPage() {
     const [selectedConfig, setSelectedConfig] = useState('default');
     const [lastUsedConfig, setLastUsedConfig] = useState('default');
     const [userAgents, setUserAgents] = useState<string[]>(['default-ui-agent']);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    const recentRuns = [
-        { id: 1, timestamp: '2h ago', agents: 4, tests: 24, passed: 22, failed: 2, duration: '2m 34s' },
-        { id: 2, timestamp: '5h ago', agents: 4, tests: 24, passed: 24, failed: 0, duration: '2m 18s' },
-        { id: 3, timestamp: '1d ago', agents: 2, tests: 24, passed: 23, failed: 1, duration: '3m 42s' },
+    const recentRuns: { id: number; timestamp: string; agents: number; tests: number; passed: number; failed: number; duration: string }[] = [
     ];
 
     const handleLaunchTests = async () => {
@@ -32,6 +30,30 @@ export default function TestPage() {
         setIsLaunching(false);
     };
 
+    const formathhmmss = (seconds: number) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours}h ${minutes}m ${secs.toPrecision(2)}s`;
+    }
+
+    const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setTestUrl(value);
+
+        if (value === '' || isValidUrl(value)) {
+            setFormErrors(prev => {
+                const updated = { ...prev };
+                delete updated['testUrl'];
+                return updated;
+            });
+        } else {
+            setFormErrors(prev => ({
+                ...prev,
+                testUrl: 'Invalid URL format'
+            }));
+        }
+    };
     const isValidUrl = (url: string) => {
         try {
             new URL(url);
@@ -154,14 +176,20 @@ export default function TestPage() {
                                     </span>
 
                                     <input
-                                        id='test url'
-                                        name='test url'
+                                        id='testUrl'
+                                        name='testUrl'
                                         type='text'
                                         value={testUrl}
-                                        onChange={(e) => setTestUrl(e.target.value)}
+                                        onChange={handleUrlChange}
                                         placeholder={"https://myapp.com"}
-                                        className="mt-4 w-full flex-1 p-3 rounded-lg border border-[var(--border-subtle)] transition-all text-left font-mono text-sm bg-[var(--background)]"
+                                        className={`mt-4 w-full flex-1 p-3 rounded-lg border transition-all text-left font-mono text-sm bg-[var(--background)] ${formErrors['testUrl']
+                                            ? 'border-rose-500 focus:outline-none'
+                                            : 'border-[var(--border-subtle)]'
+                                            }`}
                                     />
+                                    {formErrors['testUrl'] && (
+                                        <p className="text-xs text-rose-500 font-mono mt-2">{formErrors['testUrl']}</p>
+                                    )}
                                 </label>
                                 {subpages.length > 0 && (
                                     <div className="mt-4">
@@ -213,18 +241,18 @@ export default function TestPage() {
                                     <p className="text-2xl font-mono font-bold text-foreground">{agentCount}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[var(--muted)] font-mono mb-1">estimated tests</p>
-                                    <p className="text-2xl font-mono font-bold text-blue-500">24</p>
+                                    <p className="text-xs text-[var(--muted)] font-mono mb-1">estimated runtime</p>
+                                    <p className="text-2xl font-mono font-bold text-blue-500">{formathhmmss(90 / agentCount)}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={handleLaunchTests}
-                                disabled={isLaunching || !isValidUrl(testUrl)}
-                                className={`w-full py-3 rounded-lg font-semibold transition-all border ${isLaunching || !isValidUrl(testUrl)
+                                disabled={isLaunching || !isValidUrl(testUrl) || Object.keys(formErrors).length > 0}
+                                className={`w-full py-3 rounded-lg font-semibold transition-all border ${isLaunching || !isValidUrl(testUrl) || Object.keys(formErrors).length > 0
                                     ? 'text-[var(--muted)] cursor-not-allowed border-[var(--muted)]'
                                     : 'text-white hover:shadow-lg hover:cursor-pointer '
                                     }`}
-                                style={isLaunching || !isValidUrl(testUrl)
+                                style={isLaunching || !isValidUrl(testUrl) || Object.keys(formErrors).length > 0
                                     ? { borderColor: 'var(--border)' }
                                     : { borderColor: 'var(--muted)' }}
                             >
