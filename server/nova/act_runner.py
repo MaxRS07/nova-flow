@@ -98,15 +98,15 @@ class ActRunner:
         import threading
         import traceback
 
+        results_queue: queue.Queue = queue.Queue()
+        loop = asyncio.get_running_loop()
+
         # Import here to avoid circular imports
         if self.run_id:
             from nova.callbacks.stream_callback import StreamInputCallback
-            human_callback = StreamInputCallback(self.run_id)
+            human_callback = StreamInputCallback(self.run_id, loop)
         else:
             human_callback = None
-
-        results_queue: queue.Queue = queue.Queue()
-        loop = asyncio.get_running_loop()
         error_occurred = False
 
         def run_sync():
@@ -120,8 +120,8 @@ class ActRunner:
                 pass
             
             subpages = []
-            _agent_config = agent_config[0]
             try:
+                _agent_config = agent_config[0]
                 agent = self.create_agent(url, human_callback, _agent_config)
                 self.nova = agent
                 
@@ -136,6 +136,7 @@ class ActRunner:
                                 if not agent.page.url.startswith(url):
                                     agent.go_to_url(url)
                                     if errors := agent.page.page_errors():
+                                        from websocket_manager import run_manager
                                         run_manager.send(self.run_id, {
                                             "type": "page_error",
                                             "page": agent.page.url,

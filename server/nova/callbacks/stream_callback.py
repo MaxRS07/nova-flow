@@ -12,17 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class StreamInputCallback(HumanInputCallbacksBase):
-    def __init__(self, run_id: str):
+    def __init__(self, run_id: str, loop: asyncio.AbstractEventLoop):
         self.run_id = run_id
+        self._loop = loop
         self._act_session_id = None  # To track the current Act session if needed
 
     def approve(self, message) -> ApprovalResponse:
         """Send approval request over the run's WebSocket and block until response."""
         try:
-            loop = asyncio.get_event_loop()
             future = asyncio.run_coroutine_threadsafe(
                 run_manager.request(self.run_id, {"message": message}),
-                loop
+                self._loop
             )
             response = future.result(timeout=300)
 
