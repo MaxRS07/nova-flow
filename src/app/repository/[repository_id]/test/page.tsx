@@ -331,7 +331,7 @@ export default function TestPage() {
                                 {/* Configuration Section */}
                                 <div className="bg-[var(--surface)] rounded-xl p-6 mb-8" style={{ border: '1px solid var(--border-subtle)' }}>
                                     <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-6">Agent Configuration</p>
-                                    <span className="text-sm font-mono text-[var(--foreground-soft)] mb-3 block">Configuration Profile
+                                    {/* <span className="text-sm font-mono text-[var(--foreground-soft)] mb-3 block">Configuration Profile
                                         <InfoIcon text="Configure your test fleet by selecting an agent configuration profile, customizing user agents for diverse test execution, and setting the number of parallel agents to optimize testing speed." />
                                     </span>
 
@@ -347,7 +347,7 @@ export default function TestPage() {
                                             onCreate={() => { }}
                                             lastUsedValue={lastUsedConfig}
                                         />
-                                    </div>
+                                    </div> */}
                                     {/* Edit Agent */}
                                     <div>
                                         <span className="block text-sm font-mono text-[var(--foreground-soft)] mb-3">

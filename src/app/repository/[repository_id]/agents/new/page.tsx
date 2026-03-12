@@ -71,9 +71,9 @@ export default function NewAgentPage() {
         throw new Error('At least one action is required');
       }
 
-      // Create agent object
+      // Create agent object — omit id so the DB generates a uuid
       const agent: Agent = {
-        id: `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: '',
         repo_id: repositoryId,
         name: name.trim(),
         actions: actions.filter((a) => a.trim()),
@@ -88,7 +88,6 @@ export default function NewAgentPage() {
         created: new Date().toISOString(),
       };
 
-      // Save to database
       await saveAgent(agent);
 
       // Redirect to agents page

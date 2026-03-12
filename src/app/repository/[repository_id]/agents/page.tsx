@@ -96,7 +96,7 @@ export default function AgentsPage() {
                                                     <p className="text-sm font-mono text-[var(--muted)]">{new Date(agent.created).toLocaleDateString()}</p>
                                                 </td>
                                                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                                                    <button onClick={() => handleRemove(agent.id)} className="opacity-10 transition-all hover:opacity-100 hover:text-rose-500 text-sm font-medium">
+                                                    <button onClick={() => agent.id && handleRemove(agent.id)} className="opacity-10 transition-all hover:opacity-100 hover:text-rose-500 text-sm font-medium">
                                                         Delete
                                                     </button>
                                                 </td>

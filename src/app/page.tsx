@@ -33,7 +33,7 @@ export default function Home() {
     setError(null);
     try {
       const repoId = typeof repo.id === 'string' ? parseInt(repo.id, 10) : repo.id;
-      const savedProject = await saveProject({ ...repo, id: repoId });
+      await saveProject({ repo_id: repoId, url: repo.url ?? undefined });
       addProject(repo);
       setConnectPageOpen(false);
     } catch (err) {

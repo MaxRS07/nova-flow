@@ -9,6 +9,7 @@ import logging
 import traceback
 from nova.types import Agent
 import time
+from guardrails import autopass_guardrail
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class ActRunner:
                 nova_act_api_key=KEY,
                 starting_page=url,
                 human_input_callbacks=human_callback,
+                state_guardrail=autopass_guardrail,
             )
             logger.info("Nova Act agent created successfully")
             return act

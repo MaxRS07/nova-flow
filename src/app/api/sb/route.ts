@@ -24,9 +24,11 @@ function getGithubId(request: Request): string | null {
 }
 
 // Map camelCase Agent → snake_case DB row
+// Only include id if it looks like a uuid (i.e. came from the DB), so inserts let the DB generate it
 function agentToRow(agent: Agent, userId: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(agent.id ?? '');
     return {
-        id: agent.id,
+        ...(isUuid ? { id: agent.id } : {}),
         user_id: userId,
         repo_id: agent.repo_id ?? null,
         name: agent.name,
@@ -217,10 +219,18 @@ export async function POST(request: Request) {
     if (action === 'save-project') {
         const { project } = body;
         if (!project) return NextResponse.json({ error: 'Missing project' }, { status: 400 });
+        if (!project.repo_id) return NextResponse.json({ error: 'Missing project.repo_id' }, { status: 400 });
+
+        // Only write columns that exist in the schema
+        const row = {
+            repo_id: project.repo_id,
+            url: project.url ?? null,
+            user_id: userId,
+        };
 
         const { data, error } = await supabase
             .from('projects')
-            .upsert({ ...project, user_id: userId }, { onConflict: 'repo_id' })
+            .upsert(row, { onConflict: 'repo_id' })
             .select().single();
         if (error) return NextResponse.json({ error: error.message }, { status: 500 });
         return NextResponse.json(data, { status: 201 });

@@ -50,7 +50,7 @@ export type Fault = {
     evidence: string[];
 }
 export interface Agent {
-    id: string;
+    id?: string;
     repo_id?: number;
     name: string;
     actions: string[];
