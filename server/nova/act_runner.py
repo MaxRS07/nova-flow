@@ -123,7 +123,6 @@ class ActRunner:
             except Exception:
                 pass
             
-            subpages = []
             try:
                 use_agent = agent_config[0]
                 use_agent_config = use_agent.get("config", {})
@@ -142,18 +141,20 @@ class ActRunner:
                             try:
                                 res = agent.act_get(
                                     step,
+                                    max_steps=10,
                                     timeout=200,
                                     model_seed=1,
                                     model_top_k=model_top_P,
-                                    temperature=temp,
+                                    model_temperature=temp,
                                     schema=Faults.model_json_schema()
                                 )
                                 results_queue.put(res.metadata)
                                 
                                 if res.matches_schema:
+                                    from websocket_manager import run_manager
                                     run_manager.send(self.run_id, {
                                         "type": "fault",
-                                        "fault": res.parsed_response.dict(),
+                                        "fault": res.parsed_response,
                                     })
                                 
                                 if not agent.page.url.startswith(url):

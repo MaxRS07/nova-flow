@@ -190,7 +190,6 @@ export default function TestPage() {
 
             actSocket.onError = (error) => {
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error("Act socket error:", error);
                 setTestRuns(prev => {
                     const updatedRuns = prev.map(r => {
                         if (r.id === runId) {
@@ -366,7 +365,7 @@ export default function TestPage() {
                                                             handleDeleteTestRun(run.id)
                                                         }
                                                     }}
-                                                    className={"px-2 py-1 text-xs font-mono rounded transition-colors text-red-500 hover:bg-red-500/10"}
+                                                    className={"px-2.5 py-1 text-m font-mono rounded transition-colors text-red-500 hover:bg-red-500/10 flex justify-center align-middle place-self-center"}
                                                     title={run.status === 'running' ? 'Stop test run' : 'Delete test run'}
                                                 >
                                                     {run.status === 'running' ? '■' : '✕'}

@@ -123,25 +123,30 @@ export default function TestDetailPage() {
                                     </div>
                                     <div className="p-6 max-h-96 overflow-y-auto">
                                         {run.logs.length === 0 ? (
-                                            <p className="text-sm text-[var(--muted)] font-mono">
+                                            <p className="text-sm text-(--muted) font-mono">
                                                 {run.status === 'running' ? 'Waiting for output...' : 'No output recorded'}
                                             </p>
                                         ) : (
                                             <div className="space-y-1">
-                                                {run.logs.map((log, i) => (
-                                                    <div key={i} className="text-xs font-mono text-[var(--foreground-soft)] leading-relaxed break-all flex flex-row">
-                                                        <span className="text-[var(--muted)] mr-2 select-none">{String(i + 1).padStart(3, ' ')}</span>
-                                                        {log}
-                                                    </div>
-                                                ))}
+                                                {run.logs.map((log, i) => {
+                                                    const color = log.startsWith('Error:') ? 'text-rose-500' : log.startsWith('Metadata:') ? 'text-blue-400' : 'text-[var(--muted)]';
+                                                    return (
+                                                        <div key={i} className={`text-xs font-mono ${color} leading-relaxed break-all flex flex-row`}>
+                                                            <span className={"font-mono text-(--foreground-soft) mr-2 select-none"}>
+                                                                {String(i + 1)}
+                                                            </span>
+                                                            {log}
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
                                 </div>
                                 { /* Git Revision */}
-                                <div className="bg-[var(--surface)] rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
-                                    <div className="px-6 py-4 bg-[var(--muted-bg)] flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                        <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">git revision</p>
+                                <div className="bg-(--surface) rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
+                                    <div className="px-6 py-4 bg-(--muted-bg) flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                        <p className="text-xs font-mono text-(--muted) uppercase tracking-wider">git revision</p>
                                     </div>
                                     <div className="p-6" />
                                 </div>
