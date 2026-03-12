@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar';
 import Topbar from '@/components/Topbar';
 import { Agent } from '@/types/nova';
 import { useState, useEffect } from 'react';
+import { getAgents, deleteAgent } from '@/lib/supabase';
 
 export default function AgentsPage() {
     const params = useParams();
@@ -16,25 +17,31 @@ export default function AgentsPage() {
     const [agents, setAgents] = useState<Agent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Load agents from localStorage on mount
+    // Load agents from database on mount
     useEffect(() => {
-        try {
-            const agentsJson = localStorage.getItem('nova-agents');
-            if (agentsJson) {
-                const loadedAgents = JSON.parse(agentsJson);
+        const loadAgents = async () => {
+            try {
+                const loadedAgents = await getAgents(repositoryId as string);
                 setAgents(loadedAgents);
+            } catch (error) {
+                console.error('Failed to load agents:', error);
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error('Failed to load agents:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []);
+        };
 
-    const handleRemove = (id: string) => {
-        const updatedAgents = agents.filter(agent => agent.id !== id);
-        setAgents(updatedAgents);
-        localStorage.setItem('nova-agents', JSON.stringify(updatedAgents));
+        if (repositoryId) {
+            loadAgents();
+        }
+    }, [repositoryId]);
+
+    const handleRemove = async (id: string) => {
+        try {
+            await deleteAgent(id);
+            setAgents(agents.filter(agent => agent.id !== id));
+        } catch (error) {
+            console.error('Failed to delete agent:', error);
+        }
     }
 
     return (

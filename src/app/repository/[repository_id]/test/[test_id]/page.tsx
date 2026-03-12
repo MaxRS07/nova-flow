@@ -57,11 +57,18 @@ export default function TestDetailPage() {
                                         <h1 className="text-2xl font-semibold text-[var(--foreground)] tracking-tight">Test Run</h1>
                                         {statusBadge(run.status)}
                                     </div>
-                                    <p className="text-sm text-[var(--muted)] font-mono">{run.url}</p>
+                                </div>
+
+                                { /* Test URL */}
+                                <div className='bg-[var(--surface)] rounded-xl p-4 mb-6' style={{ border: '1px solid var(--border-subtle)' }}>
+                                    <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-1">URL</p>
+                                    <a href={run.url} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-[var(--accent)] hover:underline">
+                                        {run.url}
+                                    </a>
                                 </div>
 
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-3 gap-4 mb-8">
+                                <div className="grid grid-cols-3 gap-4 mb-6">
                                     {[
                                         { label: 'Status', value: run.status, color: run.status === 'running' ? 'text-blue-400' : run.status === 'completed' ? 'text-emerald-400' : 'text-rose-400' },
                                         { label: 'Agents', value: run.agents, color: 'text-[var(--foreground)]' },

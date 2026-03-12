@@ -7,6 +7,7 @@ import Topbar from '@/components/Topbar';
 import MarkdownEditor from '@/components/MarkdownEditor';
 import InfoIcon from '@/components/InfoIcon';
 import { Agent } from '@/types/nova';
+import { getAgent, saveAgent, deleteAgent } from '@/lib/supabase';
 
 export default function AgentDetailPage() {
     const router = useRouter();
@@ -39,31 +40,27 @@ export default function AgentDetailPage() {
     ];
 
     useEffect(() => {
-        try {
-            const agentsJson = localStorage.getItem('nova-agents');
-            if (agentsJson) {
-                const agents: Agent[] = JSON.parse(agentsJson);
-                const foundAgent = agents.find(a => a.id === agentId);
-                if (foundAgent) {
-                    setAgent(foundAgent);
-                    setName(foundAgent.name);
-                    setActions(foundAgent.actions);
-                    setContext(foundAgent.context);
-                    setTemperature(foundAgent.config.temperature);
-                    setTopP(foundAgent.config.topP);
-                    setMaxTokens(foundAgent.config.maxTokens);
-                    setSelectedTools(foundAgent.selectedTools);
-                } else {
-                    setErrorMessage('Agent not found');
-                }
-            } else {
-                setErrorMessage('No agents found');
+        const loadAgent = async () => {
+            try {
+                const foundAgent = await getAgent(agentId);
+                setAgent(foundAgent);
+                setName(foundAgent.name);
+                setActions(foundAgent.actions);
+                setContext(foundAgent.context);
+                setTemperature(foundAgent.config.temperature);
+                setTopP(foundAgent.config.topP);
+                setMaxTokens(foundAgent.config.maxTokens);
+                setSelectedTools(foundAgent.selectedTools);
+            } catch (error) {
+                console.error('Failed to load agent:', error);
+                setErrorMessage('Failed to load agent');
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error('Failed to load agent:', error);
-            setErrorMessage('Failed to load agent');
-        } finally {
-            setIsLoading(false);
+        };
+
+        if (agentId) {
+            loadAgent();
         }
     }, [agentId]);
 
@@ -100,30 +97,22 @@ export default function AgentDetailPage() {
                 throw new Error('At least one action is required');
             }
 
-            // Load all agents
-            const agentsJson = localStorage.getItem('nova-agents');
-            const allAgents: Agent[] = agentsJson ? JSON.parse(agentsJson) : [];
+            // Create updated agent
+            const updatedAgent: Agent = {
+                ...agent!,
+                name: name.trim(),
+                actions: actions.filter(a => a.trim()),
+                context: context.trim(),
+                config: {
+                    temperature,
+                    topP,
+                    maxTokens,
+                },
+                selectedTools,
+            };
 
-            // Update the agent
-            const updatedAgents = allAgents.map(a => {
-                if (a.id === agentId) {
-                    return {
-                        ...a,
-                        name: name.trim(),
-                        actions: actions.filter(a => a.trim()),
-                        context: context.trim(),
-                        config: {
-                            temperature,
-                            topP,
-                            maxTokens,
-                        },
-                        selectedTools,
-                    };
-                }
-                return a;
-            });
-
-            localStorage.setItem('nova-agents', JSON.stringify(updatedAgents));
+            // Save to database
+            await saveAgent(repositoryId, updatedAgent);
             setSuccessMessage('Agent updated successfully!');
 
             setTimeout(() => {
@@ -137,13 +126,10 @@ export default function AgentDetailPage() {
         }
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (confirm('Are you sure you want to delete this agent?')) {
             try {
-                const agentsJson = localStorage.getItem('nova-agents');
-                const allAgents: Agent[] = agentsJson ? JSON.parse(agentsJson) : [];
-                const filteredAgents = allAgents.filter(a => a.id !== agentId);
-                localStorage.setItem('nova-agents', JSON.stringify(filteredAgents));
+                await deleteAgent(agentId);
                 router.push(`/repository/${repositoryId}/agents`);
             } catch (error) {
                 setErrorMessage('Failed to delete agent');

@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import InfoIcon from '@/components/InfoIcon';
 import { startNovaActJob } from '@/lib/nova';
 import { ActRequestBody, defaultUiAgent, TestRun } from '@/types/nova';
+import { getTestRuns, saveTestRun, deleteTestRun } from '@/lib/supabase';
 
 export default function TestPage() {
     const params = useParams();
@@ -35,6 +36,22 @@ export default function TestPage() {
     const [userAgents, setUserAgents] = useState<string[]>(['default-ui-agent']);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [launchError, setLaunchError] = useState<string | null>(null);
+
+    // Load test runs from database on mount
+    useEffect(() => {
+        const loadTestRuns = async () => {
+            try {
+                const runs = await getTestRuns(repositoryId as string);
+                setTestRuns(runs);
+            } catch (error) {
+                console.error('Failed to load test runs:', error);
+            }
+        };
+
+        if (repositoryId) {
+            loadTestRuns();
+        }
+    }, [repositoryId]);
 
     const isValidUrl = (url: string) => {
         try {
@@ -104,6 +121,13 @@ export default function TestPage() {
 
             const startTime = Date.now();
 
+            // Save new test run to database
+            try {
+                await saveTestRun(repositoryId as string, newRun);
+            } catch (error) {
+                console.error('Failed to save test run:', error);
+            }
+
             actSocket.onApprovalRequest = async (message: string) => {
                 console.log("Approval request:", message);
                 return true;
@@ -125,18 +149,32 @@ export default function TestPage() {
 
             actSocket.onClose = () => {
                 const elapsed = Math.round((Date.now() - startTime) / 1000);
+                const updatedRun = { ...newRun, status: newRun.status === 'running' ? 'completed' as const : newRun.status, duration: formathhmmss(elapsed) };
                 setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? { ...r, status: r.status === 'running' ? 'completed' : r.status, duration: formathhmmss(elapsed) } : r
+                    r.id === runId ? updatedRun : r
                 ));
+
+                // Save completed test run to database
+                saveTestRun(repositoryId as string, updatedRun).catch(error => {
+                    console.error('Failed to save completed test run:', error);
+                });
+
                 setIsLaunching(false);
             };
 
             actSocket.onError = (error) => {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error("Act socket error:", error);
+                const failedRun = { ...newRun, status: 'failed' as const, logs: [...newRun.logs, `Error: ${errorMessage}`] };
                 setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? { ...r, status: 'failed', logs: [...r.logs, `Error: ${errorMessage}`] } : r
+                    r.id === runId ? failedRun : r
                 ));
+
+                // Save failed test run to database
+                saveTestRun(repositoryId as string, failedRun).catch(err => {
+                    console.error('Failed to save error test run:', err);
+                });
+
                 setIsLaunching(false);
             };
         } catch (error) {
@@ -156,6 +194,16 @@ export default function TestPage() {
         setUserAgents(['default-ui-agent']);
         setFormErrors({});
         setLaunchError(null);
+    };
+
+    const handleDeleteTestRun = async (runId: string) => {
+        try {
+            await deleteTestRun(runId);
+            setTestRuns(prev => prev.filter(r => r.id !== runId));
+        } catch (error) {
+            console.error('Failed to delete test run:', error);
+            setLaunchError(`Failed to delete test run: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     };
 
     const statusBadge = (status: TestRun['status']) => {
@@ -220,8 +268,8 @@ export default function TestPage() {
 
                                 {/* Test Runs Table */}
                                 <div className="bg-[var(--surface)] rounded-xl overflow-hidden" style={{ border: '1px solid var(--border-subtle)' }}>
-                                    <div className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr] px-6 py-3 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                        {['url', 'status', 'agents', 'faults detected', 'time', 'duration'].map((col) => (
+                                    <div className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr_0.5fr] px-6 py-3 bg-[var(--muted-bg)]" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                        {['url', 'status', 'agents', 'faults detected', 'time', 'duration', ''].map((col) => (
                                             <span key={col} className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider">{col}</span>
                                         ))}
                                     </div>
@@ -234,16 +282,31 @@ export default function TestPage() {
                                         testRuns.map((run, i) => (
                                             <div
                                                 key={run.id}
-                                                onClick={() => router.push(`/repository/${repositoryId}/test/${run.id}`)}
-                                                className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr] px-6 py-4 hover:bg-[var(--muted-bg)] transition-colors items-center cursor-pointer"
+                                                className="grid grid-cols-[1fr_1fr_0.8fr_1fr_1fr_0.8fr_0.5fr] px-6 py-4 hover:bg-[var(--muted-bg)] transition-colors items-center"
                                                 style={i < testRuns.length - 1 ? { borderBottom: '1px solid var(--border-subtle)' } : {}}
                                             >
-                                                <span className="font-mono text-sm text-[var(--foreground)] truncate pr-4" title={run.url}>{run.url}</span>
+                                                <span
+                                                    onClick={() => router.push(`/repository/${repositoryId}/test/${run.id}`)}
+                                                    className="font-mono text-sm text-[var(--foreground)] truncate pr-4 cursor-pointer hover:underline"
+                                                    title={run.url}
+                                                >
+                                                    {run.url}
+                                                </span>
                                                 <span>{statusBadge(run.status)}</span>
                                                 <span className="font-mono text-sm text-[var(--foreground)]">{run.agents}</span>
                                                 <span className={`font-mono text-sm ${run.faults > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>{run.faults}</span>
                                                 <span className="font-mono text-sm text-[var(--foreground-soft)]">{run.timestamp}</span>
                                                 <span className="font-mono text-sm text-[var(--muted)]">{run.duration}</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteTestRun(run.id);
+                                                    }}
+                                                    className="px-2 py-1 text-xs font-mono text-red-500 hover:bg-red-500/10 rounded transition-colors"
+                                                    title="Delete test run"
+                                                >
+                                                    ✕
+                                                </button>
                                             </div>
                                         ))
                                     )}

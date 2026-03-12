@@ -9,6 +9,7 @@ import MarkdownEditor from '@/components/MarkdownEditor';
 import Link from 'next/link';
 import InfoIcon from '@/components/InfoIcon';
 import { Agent } from '@/types/nova';
+import { saveAgent } from '@/lib/supabase';
 
 export default function NewAgentPage() {
   const router = useRouter();
@@ -86,17 +87,8 @@ export default function NewAgentPage() {
         created: new Date().toISOString(),
       };
 
-      // Load existing agents from localStorage
-      const existingAgentsJson = typeof window !== 'undefined' ? localStorage.getItem('nova-agents') : null;
-      const existingAgents: Agent[] = existingAgentsJson ? JSON.parse(existingAgentsJson) : [];
-
-      // Add new agent
-      const updatedAgents = [agent, ...existingAgents];
-
-      // Save back to localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('nova-agents', JSON.stringify(updatedAgents));
-      }
+      // Save to database
+      await saveAgent(repositoryId as string, agent);
 
       // Redirect to agents page
       router.push(`/repository/${repositoryId}/agents`);
