@@ -62,7 +62,7 @@ export interface Agent {
         maxTokens: number;
     };
     selectedTools: string[];
-    created: string;
+    created?: string;
 }
 
 export interface Project {
@@ -86,5 +86,4 @@ export const defaultUiAgent: Agent = {
         maxTokens: 0
     },
     selectedTools: [],
-    created: "--:--"
 };

@@ -93,7 +93,7 @@ export default function AgentsPage() {
                                                     <p className="text-sm text-[var(--muted)]">{agent.actions.join(', ').slice(0, 50)}{agent.actions.join(', ').length > 50 ? '...' : ''}</p>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <p className="text-sm font-mono text-[var(--muted)]">{new Date(agent.created).toLocaleDateString()}</p>
+                                                    <p className="text-sm font-mono text-[var(--muted)]">{new Date(agent.created || Date.now()).toLocaleDateString()}</p>
                                                 </td>
                                                 <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                                     <button onClick={() => agent.id && handleRemove(agent.id)} className="opacity-10 transition-all hover:opacity-100 hover:text-rose-500 text-sm font-medium">
