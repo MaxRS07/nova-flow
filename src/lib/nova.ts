@@ -1,4 +1,4 @@
-import { ActMetadata, ActRequestBody } from "@/types/nova";
+import { ActMetadata, ActRequestBody, Fault } from "@/types/nova";
 
 export async function startNovaActJob(data: ActRequestBody): Promise<ActSocket> {
     try {
@@ -39,6 +39,9 @@ class ActSocket {
     public onOpen?: () => void;
     public onClose?: () => void;
     public onError?: (error: any) => void;
+
+    public onPageError?: (page: string, errors: any) => void;
+    public onFault?: (fault: Fault[]) => void;
 
     constructor(run_id: string) {
         this.socket = new WebSocket(`ws://localhost:8000/ws/run/${run_id}`);
@@ -98,7 +101,12 @@ class ActSocket {
                     }
                     break;
                 case 'page_error':
-                    console.error(`Page error on ${data.page}:`, data.errors);
+                    if (this.onPageError) {
+                        this.onPageError(data.page, data.errors);
+                    }
+                    break;
+                case 'fault':
+                    this.onFault?.(data.fault);
                     break;
                 default:
                     console.log("Received message:", data);
@@ -112,5 +120,9 @@ class ActSocket {
 
     getRunId() {
         return this.run_id;
+    }
+
+    cancel() {
+        this.send({ type: "cancel" });
     }
 }

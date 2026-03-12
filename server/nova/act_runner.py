@@ -11,7 +11,7 @@ from nova.types import Agent
 import time
 
 from nova_act.types.guardrail import GuardrailDecision
-from schemas.fault import Faults
+from nova.schemas.fault import Faults
 
 # Configure logging
 logger = logging.getLogger(__name__)

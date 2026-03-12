@@ -151,16 +151,31 @@ export default function TestPage() {
                 ));
             };
 
+            actSocket.onFault = (faults) => {
+                setTestRuns(prev => prev.map(r =>
+                    r.id === runId ? { ...r, faults: [...r.faults, ...faults] } : r
+                ));
+            };
+
             actSocket.onClose = () => {
                 const elapsed = Math.round((Date.now() - startTime) / 1000);
-                const updatedRun = { ...newRun, status: newRun.status === 'running' ? 'completed' as const : newRun.status, duration: formathhmmss(elapsed) };
-                setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? updatedRun : r
-                ));
-
-                // Save completed test run to database
-                saveTestRun(updatedRun).catch(error => {
-                    console.error('Failed to save completed test run:', error);
+                setTestRuns(prev => {
+                    const updatedRuns = prev.map(r => {
+                        if (r.id === runId) {
+                            const updatedRun = {
+                                ...r,
+                                status: r.status === 'running' ? 'completed' as const : r.status,
+                                duration: formathhmmss(elapsed)
+                            };
+                            // Save completed test run to database with all accumulated faults
+                            saveTestRun(updatedRun).catch(error => {
+                                console.error('Failed to save completed test run:', error);
+                            });
+                            return updatedRun;
+                        }
+                        return r;
+                    });
+                    return updatedRuns;
                 });
 
                 // Clean up socket reference
@@ -176,14 +191,23 @@ export default function TestPage() {
             actSocket.onError = (error) => {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error("Act socket error:", error);
-                const failedRun = { ...newRun, status: 'failed' as const, logs: [...newRun.logs, `Error: ${errorMessage}`] };
-                setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? failedRun : r
-                ));
-
-                // Save failed test run to database
-                saveTestRun(failedRun).catch(err => {
-                    console.error('Failed to save error test run:', err);
+                setTestRuns(prev => {
+                    const updatedRuns = prev.map(r => {
+                        if (r.id === runId) {
+                            const failedRun = {
+                                ...r,
+                                status: 'failed' as const,
+                                logs: [...r.logs, `Error: ${errorMessage}`]
+                            };
+                            // Save failed test run to database with all accumulated faults
+                            saveTestRun(failedRun).catch(err => {
+                                console.error('Failed to save error test run:', err);
+                            });
+                            return failedRun;
+                        }
+                        return r;
+                    });
+                    return updatedRuns;
                 });
 
                 // Clean up socket reference
@@ -336,15 +360,16 @@ export default function TestPage() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleDeleteTestRun(run.id);
+                                                        if (run.status === 'running') {
+                                                            run.status = 'failed';
+                                                        } else {
+                                                            handleDeleteTestRun(run.id)
+                                                        }
                                                     }}
-                                                    className={`px-2 py-1 text-xs font-mono rounded transition-colors ${run.status === 'running'
-                                                        ? 'text-amber-500 hover:bg-amber-500/10'
-                                                        : 'text-red-500 hover:bg-red-500/10'
-                                                        }`}
+                                                    className={"px-2 py-1 text-xs font-mono rounded transition-colors text-red-500 hover:bg-red-500/10"}
                                                     title={run.status === 'running' ? 'Stop test run' : 'Delete test run'}
                                                 >
-                                                    {run.status === 'running' ? '⊗' : '✕'}
+                                                    {run.status === 'running' ? '■' : '✕'}
                                                 </button>
                                             </div>
                                         ))

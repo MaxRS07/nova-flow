@@ -44,11 +44,6 @@ export type TestRun = {
     logs: string[];
 }
 
-export type Fault = {
-    description: string;
-    severity: 'low' | 'medium' | 'high';
-    evidence: string[];
-}
 export interface Agent {
     id?: string;
     repo_id?: number;
@@ -87,3 +82,9 @@ export const defaultUiAgent: Agent = {
     },
     selectedTools: [],
 };
+
+export type Fault = {
+    message: string;
+    type: string;
+    traceback: string;
+}
