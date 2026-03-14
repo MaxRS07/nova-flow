@@ -41,13 +41,6 @@ export default function TestPage() {
     const [userAgents, setUserAgents] = useState<string[]>(['default-ui-agent']);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-    // Persist runs to sessionStorage for detail page
-    useEffect(() => {
-        for (const run of testRuns) {
-            sessionStorage.setItem(`test-run-${run.id}`, JSON.stringify(run));
-        }
-    }, [testRuns]);
-
     // Load runs from DB; sanitise any 'running' runs that have no active socket
     useEffect(() => {
         if (!repositoryId) return;
@@ -134,30 +127,45 @@ export default function TestPage() {
             actSocket.onApprovalRequest = async () => true;
 
             actSocket.onMetadataUpdate = (metadata) => {
-                setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? { ...r, logs: [...r.logs, String(metadata)] } : r
-                ));
+                setTestRuns(prev => {
+                    const next = prev.map(r =>
+                        r.id === runId ? { ...r, logs: [...r.logs, "Metadata: " + JSON.stringify(metadata)] } : r
+                    );
+                    const updated = next.find(r => r.id === runId);
+                    if (updated) saveTestRun(updated).catch(console.error);
+                    return next;
+                });
             };
 
             actSocket.onFault = (faults) => {
                 if (Array.isArray(faults)) {
-                    setTestRuns(prev => prev.map(r =>
-                        r.id === runId ? { ...r, faults: [...r.faults, ...faults] } : r
-                    ));
+                    setTestRuns(prev => {
+                        const next = prev.map(r =>
+                            r.id === runId ? { ...r, faults: [...r.faults, ...faults] } : r
+                        );
+                        const updated = next.find(r => r.id === runId);
+                        if (updated) saveTestRun(updated).catch(console.error);
+                        return next;
+                    });
                 }
             };
 
             actSocket.onThinking = (message: string) => {
-                setTestRuns(prev => prev.map(r => {
-                    if (r.id !== runId) return r;
-                    const last = r.thinking[r.thinking.length - 1];
-                    if (last) {
-                        const last_message = last.split(' ', 1).pop();
-                        const curr = message.split(' ', 1).pop();
-                        if (curr && last_message && curr[0] === last_message[0]) return r;
-                    }
-                    return { ...r, thinking: [...r.thinking, message] };
-                }));
+                setTestRuns(prev => {
+                    const next = prev.map(r => {
+                        if (r.id === runId) {
+                            if (message[4] === '>') {
+                                return { ...r, thinking: [...r.thinking, message] };
+                            } else {
+                                return { ...r, logs: [...r.logs, message] };
+                            }
+                        }
+                        return r;
+                    });
+                    const updated = next.find(r => r.id === runId);
+                    if (updated) saveTestRun(updated).catch(console.error);
+                    return next;
+                });
             };
 
             const finishRun = (finalStatus: 'completed' | 'failed') => {

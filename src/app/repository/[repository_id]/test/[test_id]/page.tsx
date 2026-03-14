@@ -5,6 +5,8 @@ import Topbar from '@/components/Topbar';
 import { useParams, useRouter } from 'next/navigation';
 import { TestRun, TestRunStatus } from '@/types/nova';
 import { useState, useEffect } from 'react';
+import { getTestRunFresh } from '@/lib/supabase';
+import { getSocket } from '@/lib/nova';
 
 export default function TestDetailPage() {
     const params = useParams();
@@ -13,22 +15,65 @@ export default function TestDetailPage() {
     const router = useRouter();
     const [outputTab, setOutputTab] = useState<'output' | 'thinking'>('output');
     const [run, setRun] = useState<TestRun | null>(null);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
-        const read = () => {
-            const stored = sessionStorage.getItem(`test-run-${testId}`);
-            if (stored) setRun(JSON.parse(stored) as TestRun);
+        if (!testId) return;
+
+        // Load initial state from DB
+        getTestRunFresh(testId)
+            .then(r => { setRun(r); setLoadError(false); })
+            .catch(() => setLoadError(true));
+
+        // If there's a live socket in the store, wire up callbacks
+        const socket = getSocket(testId);
+        if (!socket) return;
+
+        const onMeta = (metadata: any) =>
+            setRun(prev => prev ? { ...prev, logs: [...prev.logs, String(metadata)] } : prev);
+
+        const onFault = (faults: any[]) =>
+            setRun(prev => prev ? { ...prev, faults: [...prev.faults, ...faults] } : prev);
+
+        const onThinking = (message: string) =>
+            setRun(prev => {
+                if (!prev) return prev;
+                const last = prev.thinking[prev.thinking.length - 1];
+                if (last) {
+                    const lw = last.split(' ', 1).pop();
+                    const cw = message.split(' ', 1).pop();
+                    if (cw && lw && cw[0] === lw[0]) return prev;
+                }
+                return { ...prev, thinking: [...prev.thinking, message] };
+            });
+
+        const onClose = () =>
+            setRun(prev => prev ? { ...prev, status: 'completed' } : prev);
+
+        const onError = () =>
+            setRun(prev => prev ? { ...prev, status: 'failed' } : prev);
+
+        // Attach — save previous callbacks so we don't clobber the list page's handlers
+        const prevMeta = socket.onMetadataUpdate;
+        const prevFault = socket.onFault;
+        const prevThinking = socket.onThinking;
+        const prevClose = socket.onClose;
+        const prevError = socket.onError;
+
+        socket.onMetadataUpdate = (m) => { prevMeta?.(m); onMeta(m); };
+        socket.onFault = (f) => { prevFault?.(f); onFault(f); };
+        socket.onThinking = (t) => { prevThinking?.(t); onThinking(t); };
+        socket.onClose = () => { prevClose?.(); onClose(); };
+        socket.onError = (e) => { prevError?.(e); onError(); };
+
+        return () => {
+            // Restore list page callbacks on unmount
+            socket.onMetadataUpdate = prevMeta;
+            socket.onFault = prevFault;
+            socket.onThinking = prevThinking;
+            socket.onClose = prevClose;
+            socket.onError = prevError;
         };
-        read();
-        // Poll while the run might still be active
-        const interval = setInterval(() => {
-            const stored = sessionStorage.getItem(`test-run-${testId}`);
-            if (!stored) return;
-            const parsed = JSON.parse(stored) as TestRun;
-            setRun(parsed);
-            if (parsed.status !== 'running') clearInterval(interval);
-        }, 1000);
-        return () => clearInterval(interval);
     }, [testId]);
 
     const statusBadge = (status: TestRunStatus) => {
@@ -62,8 +107,14 @@ export default function TestDetailPage() {
 
                         {!run ? (
                             <div className="bg-[var(--surface)] rounded-xl p-10 text-center" style={{ border: '1px solid var(--border-subtle)' }}>
-                                <p className="text-sm text-[var(--muted)] font-mono mb-2">Test run not found</p>
-                                <p className="text-xs text-[var(--muted)] font-mono">This test run may have expired from the current session.</p>
+                                {loadError ? (
+                                    <>
+                                        <p className="text-sm text-[var(--muted)] font-mono mb-2">Test run not found</p>
+                                        <p className="text-xs text-[var(--muted)] font-mono">It may have been deleted or does not exist.</p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-[var(--muted)] font-mono animate-pulse">Loading…</p>
+                                )}
                             </div>
                         ) : (
                             <>

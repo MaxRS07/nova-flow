@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class ThinkingStreamer:
     """
     Reads lines from `line_queue` and fires them via run_manager.send()
-    as `{"type": "thinking", "message": <line>}`.
+    as `{"type": "thinking", "data": <line>}`.
     """
 
     def __init__(self, run_id: str, line_queue: queue.Queue, loop: asyncio.AbstractEventLoop):
@@ -43,7 +43,7 @@ class ThinkingStreamer:
             except queue.Empty:
                 continue
 
-            payload = {"type": "thinking", "message": line}
+            payload = {"type": "thinking", "data": line}
             asyncio.run_coroutine_threadsafe(
                 run_manager.send(self.run_id, payload),
                 self.loop,

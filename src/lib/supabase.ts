@@ -53,6 +53,16 @@ export async function getTestRun(id: string): Promise<TestRun> {
     return fetchCached(`${BASE}?resource=test-runs&id=${encodeURIComponent(id)}`);
 }
 
+/** Bypasses the 30s cache — use for polling a live run. */
+export async function getTestRunFresh(id: string): Promise<TestRun> {
+    const url = `${BASE}?resource=test-runs&id=${encodeURIComponent(id)}`;
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return parseError(res, 'Failed to fetch test run');
+    const data: TestRun = await res.json();
+    cacheSet(url, data); // keep cache warm for other callers
+    return data;
+}
+
 export async function saveTestRun(testRun: TestRun): Promise<TestRun> {
     const res = await fetch(BASE, {
         method: 'POST',

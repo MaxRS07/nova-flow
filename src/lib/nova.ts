@@ -1,5 +1,18 @@
 import { ActMetadata, ActRequestBody, Fault } from "@/types/nova";
 
+// ── Global socket store ───────────────────────────────────────────────────────
+// Module-level singleton — survives React unmounts / page navigation.
+const _sockets = new Map<string, ActSocket>();
+
+export function getSocket(runId: string): ActSocket | undefined {
+    return _sockets.get(runId);
+}
+
+export function removeSocket(runId: string) {
+    _sockets.delete(runId);
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export async function startNovaActJob(data: ActRequestBody): Promise<ActSocket> {
     try {
         const response = await fetch("/api/aws", {
@@ -59,6 +72,7 @@ class ActSocket {
     constructor(run_id: string) {
         this.socket = new WebSocket(`ws://localhost:8000/ws/run/${run_id}`);
         this.run_id = run_id;
+        _sockets.set(run_id, this);
 
         this.socket.onopen = () => {
             if (this.onOpen) this.onOpen();
@@ -70,10 +84,10 @@ class ActSocket {
         };
 
         this.socket.onclose = () => {
+            _sockets.delete(this.run_id);
             if (this._onClose) {
                 this._onClose();
             } else {
-                // Callback not yet assigned — buffer the event
                 this._closedBeforeCallback = true;
             }
         };
@@ -126,9 +140,9 @@ class ActSocket {
                 case 'fault':
                     this.onFault?.(data.fault);
                     break;
-                case 'log':
+                case 'thinking':
                     if (this.onThinking) {
-                        this.onThinking(data.message);
+                        this.onThinking(data.data);
                     }
                     break;
                 default:
