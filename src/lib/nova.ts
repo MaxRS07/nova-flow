@@ -126,11 +126,6 @@ class ActSocket {
                 case 'fault':
                     this.onFault?.(data.fault);
                     break;
-                case 'thinking':
-                    if (this.onThinking) {
-                        this.onThinking(data.message);
-                    }
-                    break;
                 case 'log':
                     if (this.onThinking) {
                         this.onThinking(data.message);

@@ -11,8 +11,9 @@ from typing import AsyncGenerator, Optional
 from nova_act import ActMetadata
 
 from nova.agent_factory import create_agent
-from nova.log_handler import WsLogHandler, WsStdoutCapture
 from nova.schemas.fault import Faults
+from nova.thinking_log_handler import ThinkingLogHandler
+from nova.thinking_streamer import ThinkingStreamer
 from nova.types import Agent
 
 logger = logging.getLogger(__name__)
@@ -52,8 +53,18 @@ class ActRunner:
         else:
             human_callback = None
 
-        ws_handler = WsLogHandler(self.run_id, loop) if self.run_id else None
-        ws_stdout = WsStdoutCapture(self.run_id, loop) if self.run_id else None
+        # --- Thinking log capture ---
+        thinking_queue: queue.Queue = queue.Queue()
+        thinking_handler = ThinkingLogHandler(thinking_queue)
+        thinking_streamer: Optional[ThinkingStreamer] = None
+
+        if self.run_id:
+            trace_logger = logging.getLogger(ThinkingLogHandler.LOGGER_NAME)
+            trace_logger.addHandler(thinking_handler)
+
+            thinking_streamer = ThinkingStreamer(self.run_id, thinking_queue, loop)
+            thinking_streamer.start()
+
         error_occurred = False
 
         def _send(payload: dict):
@@ -64,95 +75,76 @@ class ActRunner:
         def run_sync():
             nonlocal error_occurred
 
-            if ws_handler:
-                ws_handler.attach("nova_act")
-
-            # Ensure this thread has no event loop (safety for Python 3.10+)
             try:
                 asyncio.set_event_loop(None)
             except Exception:
                 pass
 
-            # Capture NovaAct stdout prints and forward them over the socket
-            stdout_ctx = ws_stdout if ws_stdout else contextlib.nullcontext()
+            use_agent = agent_config[0]
+            use_agent_config = use_agent.get("config", {})
 
-            with stdout_ctx:
-                try:
-                    use_agent = agent_config[0]
-                    use_agent_config = use_agent.get("config", {})
+            temp = use_agent_config.get("temperature", 0.7)
+            model_top_P = use_agent_config.get("topP", 5)
 
-                    temp = use_agent_config.get("temperature", 0.7)
-                    model_top_P = use_agent_config.get("topP", 5)
+            agent = create_agent(url, human_callback, use_agent)
+            self.nova = agent
 
-                    agent = create_agent(url, human_callback, use_agent)
-                    self.nova = agent
-
-                    try:
-                        with agent:
-                            for step in use_agent.get("actions", []):
-                                step_start = time.time()
-                                try:
-                                    res = agent.act_get(
-                                        step,
-                                        max_steps=10,
-                                        timeout=200,
-                                        model_seed=1,
-                                        model_top_k=model_top_P,
-                                        model_temperature=temp,
-                                        schema=Faults.model_json_schema(),
-                                    )
-                                    results_queue.put(res.metadata)
-
-                                    if res.matches_schema:
-                                        _send({"type": "fault", "fault": res.parsed_response})
-
-                                    if not agent.page.url.startswith(url):
-                                        agent.go_to_url(url)
-                                        if errors := agent.page.page_errors():
-                                            _send({
-                                                "type": "page_error",
-                                                "page": agent.page.url,
-                                                "errors": errors,
-                                            })
-
-                                except Exception as step_error:
-                                    error_occurred = True
-                                    error_msg = f"Error executing step '{step}': {str(step_error)}"
-                                    logger.error(error_msg)
-                                    logger.debug(traceback.format_exc())
-                                    results_queue.put(Exception(error_msg))
-                                    break
-                                finally:
-                                    step_end = time.time()
-                                    logger.info(f"Step '{step}' completed in {step_end - step_start:.2f} seconds")
-
-                    except Exception as agent_error:
-                        error_occurred = True
-                        error_msg = f"Error during agent execution: {str(agent_error)}"
-                        logger.error(error_msg)
-                        logger.debug(traceback.format_exc())
-                        results_queue.put(Exception(error_msg))
-
-                except Exception as init_error:
-                    error_occurred = True
-                    error_msg = f"Error initializing Nova Act agent: {str(init_error)}"
-                    logger.error(error_msg)
-                    logger.debug(traceback.format_exc())
-                    results_queue.put(Exception(error_msg))
-
-                finally:
-                    if ws_handler:
-                        ws_handler.detach()
-
-                    if self.nova:
+            try:
+                with agent:
+                    for step in use_agent.get("actions", []):
+                        step_start = time.time()
                         try:
-                            if hasattr(self.nova, "close"):
-                                self.nova.close()
-                        except Exception as cleanup_error:
-                            logger.warning(f"Error closing Nova agent: {str(cleanup_error)}")
+                            res = agent.act_get(
+                                step,
+                                max_steps=10,
+                                timeout=200,
+                                model_seed=1,
+                                model_top_k=model_top_P,
+                                model_temperature=temp,
+                                schema=Faults.model_json_schema(),
+                            )
+                            results_queue.put(res.metadata)
 
-                    self.nova = None
-                    results_queue.put(None)  # sentinel
+                            if res.matches_schema:
+                                _send({"type": "fault", "fault": res.parsed_response})
+
+                            if not agent.page.url.startswith(url):
+                                agent.go_to_url(url)
+                                if errors := agent.page.page_errors():
+                                    _send({
+                                        "type": "page_error",
+                                        "page": agent.page.url,
+                                        "errors": errors,
+                                    })
+
+                        except Exception as step_error:
+                            error_occurred = True
+                            error_msg = f"Error executing step '{step}': {str(step_error)}"
+                            logger.error(error_msg)
+                            logger.debug(traceback.format_exc())
+                            results_queue.put(Exception(error_msg))
+                            break
+                        finally:
+                            step_end = time.time()
+                            logger.info(f"Step '{step}' completed in {step_end - step_start:.2f} seconds")
+
+            except Exception as agent_error:
+                error_occurred = True
+                error_msg = f"Error during agent execution: {str(agent_error)}"
+                logger.error(error_msg)
+                logger.debug(traceback.format_exc())
+                results_queue.put(Exception(error_msg))
+
+            finally:
+                if self.nova:
+                    try:
+                        if hasattr(self.nova, "close"):
+                            self.nova.close()
+                    except Exception as cleanup_error:
+                        logger.warning(f"Error closing Nova agent: {str(cleanup_error)}")
+
+                self.nova = None
+                results_queue.put(None)  # sentinel
 
         thread = threading.Thread(target=run_sync, daemon=True)
         thread.start()
@@ -187,6 +179,15 @@ class ActRunner:
             raise
 
         finally:
+            # Stop thinking streamer and clean up the log handler
+            if thinking_streamer:
+                thinking_streamer.stop()
+                thinking_streamer.join(timeout=5.0)
+
+            if self.run_id:
+                trace_logger = logging.getLogger(ThinkingLogHandler.LOGGER_NAME)
+                trace_logger.removeHandler(thinking_handler)
+
             try:
                 await asyncio.wait_for(loop.run_in_executor(None, thread.join), timeout=10)
             except asyncio.TimeoutError:

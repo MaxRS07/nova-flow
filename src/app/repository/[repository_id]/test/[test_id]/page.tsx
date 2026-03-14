@@ -167,7 +167,7 @@ export default function TestDetailPage() {
                                                     {run.logs.map((log, i) => {
                                                         const color = log.startsWith('Error:') ? 'text-rose-500' : log.startsWith('Metadata:') ? 'text-blue-400' : 'text-[var(--muted)]';
                                                         return (
-                                                            <div key={i} className={`text-xs font-mono ${color} leading-relaxed break-all flex flex-row`}>
+                                                            <div key={i} className={`text-xs font-mono ${color} leading-relaxed break-all flex flex-row`} style={{ textAlign: 'right' }}>
                                                                 <span className={"font-mono text-(--foreground-soft) mr-2 select-none"}>
                                                                     {String(i + 1)}
                                                                 </span>
@@ -181,8 +181,8 @@ export default function TestDetailPage() {
                                             (run as any).thinking && (run as any).thinking.length > 0 ? (
                                                 <div className="space-y-1">
                                                     {(run as any).thinking.map((thought: string, i: number) => (
-                                                        <div key={i} className="text-xs font-mono text-[var(--muted)] leading-relaxed break-all flex flex-row">
-                                                            <span className={"font-mono text-(--foreground-soft) mr-2 select-none"}>
+                                                        <div key={i} className="text-xs font-mono text-(--muted) leading-relaxed break-all flex flex-row">
+                                                            <span className={"font-mono text-(--foreground-soft) mr-2 select-none"} style={{ textAlign: 'right' }}>
                                                                 {String(i + 1)}
                                                             </span>
                                                             {thought}

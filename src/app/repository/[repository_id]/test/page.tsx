@@ -135,7 +135,7 @@ export default function TestPage() {
 
             actSocket.onMetadataUpdate = (metadata) => {
                 setTestRuns(prev => prev.map(r =>
-                    r.id === runId ? { ...r, tests: metadata.num_steps_executed } : r
+                    r.id === runId ? { ...r, logs: [...r.logs, String(metadata)] } : r
                 ));
             };
 
@@ -152,9 +152,9 @@ export default function TestPage() {
                     if (r.id !== runId) return r;
                     const last = r.thinking[r.thinking.length - 1];
                     if (last) {
-                        const curr = message.match(/\*> (.)/);
-                        const prev2 = last.match(/\*> (.)/);
-                        if (curr && prev2 && curr[1] === prev2[1]) return r;
+                        const last_message = last.split(' ', 1).pop();
+                        const curr = message.split(' ', 1).pop();
+                        if (curr && last_message && curr[0] === last_message[0]) return r;
                     }
                     return { ...r, thinking: [...r.thinking, message] };
                 }));
